@@ -1,0 +1,6 @@
+pyyaml
+spotipy
+pyvis
+networkx
+streamlit
+pydantic
