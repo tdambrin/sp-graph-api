@@ -1,4 +1,6 @@
-from typing import Any, Dict, List
+import json
+from typing import Any, Dict, List, Tuple
+import functools
 
 import items
 from commons import utils
@@ -15,6 +17,17 @@ class SpotifyWrapper:
     def all_types(self):
         return ["album", "artist", "playlist", "track", "show", "episode", "audiobook"]
 
+    @staticmethod
+    def cache(name, obj):
+        from config import PROJECT_ROOT
+        with open(PROJECT_ROOT / "responses" / name, "w") as f:
+            json.dump(obj, f)
+
+    @staticmethod
+    def read_cache(name):
+        from config import PROJECT_ROOT
+        return json.load(open(PROJECT_ROOT / "responses" / name, "r"))
+
     def search(
         self,
         keywords: List[str],
@@ -24,7 +37,16 @@ class SpotifyWrapper:
         **kwargs,
     ) -> str:
         """
-        Returns id of the graph
+        Search from keywords and recursive recommendation. Add results to items.ItemStore
+
+        Args:
+            keywords: search keywords
+            initial_types: first level result item type restriction. All if None. NOT_IMPLEMENTED
+            restricted_types: first level result item type restriction. All if None. NOT_IMPLEMENTED
+            max_depth: recommendations start at level 2
+
+        Returns:
+            id of the graph
         """
 
         if initial_types is None:
@@ -43,14 +65,24 @@ class SpotifyWrapper:
             keywords=keywords,
             restricted_types=restricted_types or self.all_types,
         )
-        search_results = self.__client.search(**query_params)
+
+        if kwargs.get("read_cache"):
+            search_results = SpotifyWrapper.read_cache(f"search_{graph_key.lower()}.json")
+        else:
+            search_results = self.__client.search(**query_params)
+
+        if kwargs.get("write_cache"):
+            SpotifyWrapper.cache(f"search_{graph_key.lower()}.json", search_results)
 
         # Parse and set results to store
-        parsed_items = ItemStore().parse_items_from_api_result(graph_key=graph_key, search_results=search_results)
+        parsed_items = ItemStore().parse_items_from_api_result(
+            graph_key=graph_key, search_results=search_results, depth=1
+        )
         ItemStore().relate(
             graph_key=graph_key,
             parent_id=graph_key,
-            children_ids={parsed_item.name for parsed_item in parsed_items}
+            children_ids={parsed_item.id for parsed_item in parsed_items},
+            depth=1,
         )
 
         # Expand search
@@ -62,7 +94,8 @@ class SpotifyWrapper:
                 graph_key=graph_key,
                 item=item,
                 depth=2,
-                max_depth=max_depth
+                max_depth=max_depth,
+                **kwargs
             )
         return graph_key
 
@@ -71,18 +104,37 @@ class SpotifyWrapper:
             graph_key: str,
             item: items.SpotifyItem,
             depth: int,
-            max_depth: int
+            max_depth: int,
+            **kwargs,
     ):
+        """
+        Get recommendation results from item. Add items to items.ItemStore
+        Args:
+            graph_key (str): id of the graph to add items to
+            item: parsed starting item
+            depth: to recursively recommend from result nodes
+            max_depth: inclusive
+        """
         if depth > max_depth:
             return
-        recommendation_results = self._recommend(
-            **item.recommendation_query()
+
+        if kwargs.get("read_cache"):
+            recommendation_results = SpotifyWrapper.read_cache(f"recommend_{item.id}.json")
+        else:
+            recommendation_results = self._recommend(
+                **item.recommendation_query()
+            )
+        if kwargs.get("write_cache"):
+            SpotifyWrapper.cache(f"recommend_{item.id}.json", recommendation_results)
+
+        parsed_items = ItemStore().parse_items_from_api_result(
+            graph_key=graph_key,search_results=recommendation_results, depth=depth,
         )
-        parsed_items = ItemStore().parse_items_from_api_result(graph_key=graph_key,search_results=recommendation_results)
         ItemStore().relate(
             graph_key=graph_key,
-            parent_id=item.name,
-            children_ids={parsed_item.name for parsed_item in parsed_items}
+            parent_id=item.id,
+            children_ids={parsed_item.id for parsed_item in parsed_items},
+            depth=depth,
         )
         for item in parsed_items:
             self.recommend_from_item(
@@ -92,11 +144,12 @@ class SpotifyWrapper:
                 max_depth=max_depth,
             )
 
+    @functools.cache
     def _recommend(
             self,
-            seed_artists: List[items.Artist] = None,
-            seed_genres: List[str] = None,
-            seed_tracks: List[items.Track] = None,
+            seed_artists: Tuple[items.Artist] = None,
+            seed_genres: Tuple[str] = None,
+            seed_tracks: Tuple[items.Track] = None,
             limit: int = 5,
             **kwargs,
     ) -> Dict[str, Any]:

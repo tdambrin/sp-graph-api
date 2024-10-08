@@ -1,15 +1,24 @@
+"""
+Spotify Items classes for parsing, control and styling
+
+Contains:
+    - ValiItem: all possible spotify item types
+    - SpotifyItems (parent class)
+    - one class for each spotify item type
+"""
+
+
 import functools
 from operator import add
 from abc import abstractmethod
 from typing import Any, Dict, List, Optional
 from enum import Enum
+from functools import cached_property
 
-import spotipy
 from pydantic import BaseModel
 
 from api_clients import spotify_client
-from commons import dict_extend
-from config import SPOTIFY_CONF
+from config import NodeColor
 
 
 class ValidItem(Enum):
@@ -28,9 +37,26 @@ class SpotifyItem(BaseModel):
     id: str
     href: str
     external_urls: Dict[str, str]
+    images: Optional[List[Dict[str, Any]]] = None
+
+    def __hash__(self):
+        return self.id.__hash__()
 
     @abstractmethod
     def recommendation_query(self) -> Dict[str, Any]:
+        """
+        Args for wrappers.SpotifyWrapper._recommend(..)
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def node_color(self) -> str:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def title(self) -> str:
         raise NotImplementedError
 
 
@@ -41,15 +67,30 @@ class Artist(SpotifyItem):
         if self.genres:
             return
 
+        # from config import PROJECT_ROOT
+        # import json
+        # with open(PROJECT_ROOT / "responses" / f"artist_{self.id}", 'r') as f:
+        #     api_result = json.load(f)
+        # with open(PROJECT_ROOT / "responses" / f"artist_{self.id}", "w") as f:
+        #     json.dump(api_result, f)
+
         api_result = spotify_client.artist(self.id)
         if api_result:
             self.genres = api_result.get("genres")
 
     def recommendation_query(self) -> Dict[str, Any]:
         return {
-            "seed_artists": [self],
+            "seed_artists": tuple([self]),
             # "seed_genres": self.genres
         }
+
+    @property
+    def node_color(self) -> str:
+        return NodeColor.PRIMARY.value
+
+    @property
+    def title(self) -> str:
+        return f"Artist - {self.name}"
 
 
 class Album(SpotifyItem):
@@ -58,24 +99,34 @@ class Album(SpotifyItem):
 
     def recommendation_query(self) -> Dict[str, Any]:
         return {
-            "seed_artists": self.artists,
+            "seed_artists": tuple(self.artists),
             # "seed_genres": functools.reduce(add, [a.genres for a in self.artists], [])
         }
+
+    @property
+    def node_color(self) -> str:
+        return NodeColor.TERTIARY.value
+
+    @property
+    def title(self) -> str:
+        return (
+            f"Album - {self.name}\n"
+            f"released on {self.release_date}"
+        )
 
 
 class Playlist(SpotifyItem):
     description: str
     preview_url: Optional[str] = None
 
+    @cached_property
     @property
     def genres(self):
-        client = spotipy.Spotify(
-            auth_manager=spotipy.SpotifyClientCredentials(
-                client_id=SPOTIFY_CONF["client_id"],
-                client_secret=SPOTIFY_CONF["client_secret"],
-            )
-        )
-        api_result = client.playlist_items(self.id)["tracks"].get("items")
+        api_result = spotify_client.playlist_items(self.id)["tracks"].get("items")
+        # from config import PROJECT_ROOT
+        # import json
+        # with open(PROJECT_ROOT / "responses" / f"playlist_items_{self.id}", "w") as f:
+        #     json.dump(api_result, f)
         if not api_result:
             return []
         artists = [Artist(**artist_info) for artist_info in api_result.get('track', {}).get("artists", [])]
@@ -83,8 +134,16 @@ class Playlist(SpotifyItem):
 
     def recommendation_query(self) -> Dict[str, Any]:
         return {
-            "seed_genres": self.genres
+            "seed_genres": tuple(self.genres),
         }
+
+    @property
+    def node_color(self) -> str:
+        return NodeColor.TERTIARY.value
+
+    @property
+    def title(self) -> str:
+        return f"Playlist - {self.name}\n"
 
 
 class Track(SpotifyItem):
@@ -95,5 +154,16 @@ class Track(SpotifyItem):
     def recommendation_query(self) -> Dict[str, Any]:
         # album_rec_query = self.album.recommendation_query() if self.album else {}
         # artist_rec_queries = dict_extend(*[a.recommendation_query() for a in self.artists])
-        seed_tracks = {"seed_tracks": [self]}
+        seed_tracks = {"seed_tracks": tuple([self])}
         return seed_tracks  # dict_extend(album_rec_query, artist_rec_queries, seed_tracks)
+
+    @property
+    def node_color(self) -> str:
+        return NodeColor.SECONDARY.value
+
+    @property
+    def title(self) -> str:
+        return (
+            f"Track - {self.name}\n"
+            f"by {','.join([a.name for a in self.artists])}"
+        )

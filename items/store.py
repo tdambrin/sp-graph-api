@@ -1,3 +1,11 @@
+"""
+Result items store - Singleton
+
+Contains:
+    - items cached to avoid parsing again
+    - graphs for each query
+"""
+
 from functools import reduce
 from operator import add
 from typing import Any, Callable, Dict, List, Optional, Set
@@ -5,6 +13,7 @@ from typing import Any, Callable, Dict, List, Optional, Set
 import networkx as nx
 
 import commons
+import config
 from commons.metaclasses import ThreadSafeSingleton
 from . import (
     Album,
@@ -19,7 +28,7 @@ from . import (
 class ItemStore(metaclass=ThreadSafeSingleton):
     def __init__(self):
         self._items: Dict[str, SpotifyItem] = {}
-        self._graphs: Dict[str, nx.Graph] = dict()
+        self._graphs: Dict[str, nx.DiGraph] = dict()
 
     @property
     def _items_parser(self) -> Dict[ValidItem, Callable[..., SpotifyItem]]:
@@ -39,6 +48,22 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             ValidItem.TRACK: "tracks",
         }
 
+    @staticmethod
+    def _depth_node_size(depth: int):
+        if depth <= 1:
+            return 30
+        if depth == 2:
+            return 20
+        return 10
+
+    @staticmethod
+    def _depth_edge_weight(depth: int):
+        if depth <= 1:
+            return 12
+        if depth == 2:
+            return 6
+        return 1
+
     @property
     def graph_keys(self) -> Set[str]:
         return set(self._graphs.keys())
@@ -52,33 +77,102 @@ class ItemStore(metaclass=ThreadSafeSingleton):
     def get_graph(self, graph_key: str):
         return self._graphs.get(graph_key)
 
+    def _add_node(self, graph_key: str, item: SpotifyItem, depth: int = 3):
+        """
+        Add node to the graph
+
+        Args:
+            graph_key (str): id of the graph to add item to
+            item (items.SpotifyItem): parsed item
+            depth (int): for size styling
+        """
+        self._graphs[graph_key].add_node(
+            item.id,
+            label=item.name,
+            title=item.title,
+            size=self._depth_node_size(depth),
+            color=item.node_color,
+            shape="dot" if not item.images else "circularImage",
+            href=item.external_urls.get("spotify", "_blank"),
+            image="" if not item.images else item.images[0]["url"],
+            # font="10px arial white",
+        )
+
+    @staticmethod
+    def graph_key_from_keywords(keywords: List[str]):
+        return commons.values_to_str(keywords, "+")
+
     def set_query_node(self, query_kw: List[str]) -> str:
-        query_key = commons.values_to_str(query_kw, "+")
+        query_key = ItemStore.graph_key_from_keywords(query_kw)
         if self._graphs.get(query_key):
             return query_key
-        self._graphs[query_key] = nx.Graph()
-        self._graphs[query_key].add_node(query_key)
+        self._graphs[query_key] = nx.DiGraph()
+        self._graphs[query_key].add_node(
+            query_key,
+            label=" ".join(query_kw),
+            title="Query node",
+            size=30,
+            color=config.NodeColor.PRIMARY.value,
+            shape="circle",
+            href=f"https://open.spotify.com/search/{'%20'.join(query_kw)}",
+            # font="10px arial white",
+        )
         return query_key
 
-    def __parse_item(self, item: Dict[str, Any], item_type: ValidItem):
+    def __parse_item(self, item: Dict[str, Any], item_type: ValidItem) -> SpotifyItem:
+        """
+        Parse dict into subclass of items.SpotifyItem
+        Args:
+            item (dict): kwargs for item constructor
+            item_type (one of ValidItem): to select constructure
+
+        Returns:
+            parsed items.SpotifyItem
+        """
         return self._items_parser[item_type](**item)
 
-    def __parse_item_with_type(self, graph_key: str, item: Dict[str, Any], item_type: ValidItem) -> SpotifyItem:
+    def __parse_item_with_type(
+            self, graph_key: str, item: Dict[str, Any], item_type: ValidItem, depth: int
+    ) -> SpotifyItem:
+        """
+        Parse item and add it to store
+
+        Args:
+            graph_key (str): id of the graph to add item to
+            item (dict): item to parse and add
+            item_type (one of ValidItem):
+            depth (int): depth of node (for styling)
+
+        Returns:
+            parsed items.SpotifyItem
+        """
         if not self._items.get(item["id"]):
             self._items[item["id"]] = self.__parse_item(item=item, item_type=item_type)
-            self._graphs[graph_key].add_node(self._items[item["id"]].name)
+        if not self._graphs[graph_key].nodes.get(item["id"]):
+            self._add_node(graph_key=graph_key, item=self._items[item["id"]], depth=depth,)
         return self._items[item["id"]]
 
     def parse_items_from_list(self, dict_items: List[Dict[str, Any]], item_type: ValidItem) -> List[SpotifyItem]:
         return [self.__parse_item(item=item, item_type=item_type) for item in dict_items]
 
     def parse_items_from_api_result(
-            self, graph_key: str, search_results: Dict[str, Any]
+            self, graph_key: str, search_results: Dict[str, Any], depth: int,
     ) -> List[SpotifyItem]:
+        """
+        Parse api result with json objects for potentially all items.SpotifyItem subclasses
+        Args:
+            graph_key (str): id of the graph to add item to
+            search_results (dict): api result with first level keys as spotify items names
+            depth (int): for styling when adding to the graph
+
+        Returns:
+            list of parsed items.SpotifyItem
+        """
         def _items_or_empty(entry: Optional[Dict[str, Any]], entry_type: ValidItem) -> List[Dict[str, Any]]:
             if (not entry) or (isinstance(entry, dict) and not entry.get("items")):
                 return []
-            return [{"item": item, "item_type": entry_type} for item in (entry if isinstance(entry, list) else entry["items"])]
+            return [{"item": item, "item_type": entry_type}
+                    for item in (entry if isinstance(entry, list) else entry["items"])]
 
         non_parsed_items = reduce(
             add,
@@ -88,8 +182,19 @@ class ItemStore(metaclass=ThreadSafeSingleton):
                 )
         )
 
-        return [self.__parse_item_with_type(**{**item, "graph_key": graph_key}) for item in non_parsed_items]
+        return [self.__parse_item_with_type(**{**item, "graph_key": graph_key, "depth": depth})
+                for item in non_parsed_items]
 
-    def relate(self, graph_key: str, parent_id: str, children_ids: Set[str]):
+    def relate(self, graph_key: str, parent_id: str, children_ids: Set[str], depth: int):
+        """
+        Add edges between result/query nodes
+
+        Args:
+            graph_key (str): id of the graph to relate item in
+            parent_id (str): node id of the parent node to relate item with
+            children_ids (List[str]): list of node ids relate parent item with
+            depth (int): for styling when adding to the graph
+        """
         for children_id in children_ids:
-            self._graphs[graph_key].add_edge(parent_id, children_id)
+            # children first for color
+            self._graphs[graph_key].add_edge(children_id, parent_id, weight=self._depth_edge_weight(depth))

@@ -8,9 +8,13 @@
 
 ## Version 0.2 - Improve viz and interactions
 
-- [ ] Different colors for different types
-- [ ] Nodes property when hover: description, link
+- [x] Different colors for different types
+- [x] Description on hover
+- [x] Preview picture
+- [x] Redirect spotify on alt click
+- [x] Space out nodes - Atlas model
 
 # Version 0.3 - Improve recommendations and UX
 - [ ] The search endpoint accepts a _type_ param that can be either track, album, playlist, etc
+- [ ] Interactive graph - not just 
 - [ ] Query 2 levels from any node you click

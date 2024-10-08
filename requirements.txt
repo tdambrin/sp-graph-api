@@ -4,3 +4,4 @@ pyvis
 networkx
 streamlit
 pydantic
+jinja2

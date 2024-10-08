@@ -1,11 +1,17 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-from config import OUTPUT_DIR
+from controller import Controller
 
-st.title("Explore Spotify")
+st.set_page_config(
+    layout="wide",
+)
 
-HtmlFile = open(OUTPUT_DIR / "khruangbin_v_0_1.html", 'r', encoding='utf-8')
-source_code = HtmlFile.read()
-components.html(source_code, height=1200, width=1000)
+st.title("Explore through graphs")
+st.markdown("_Powered by Spotify Web API_")
 
+keywords = st.text_input(label="Search spotify: ", value="the weekend")
+
+controller = Controller(keywords=[kw.strip() for kw in keywords.split(" ") if kw])
+
+components.html(controller.get_graph_as_html(cache=True, save=True), height=1200, scrolling=True)
