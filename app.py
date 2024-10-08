@@ -10,7 +10,7 @@ st.set_page_config(
 st.title("Explore through graphs")
 st.markdown("_Powered by Spotify Web API_")
 
-keywords = st.text_input(label="Search spotify: ", value="the weekend")
+keywords = st.text_input(label="Search spotify: ")
 
 controller = Controller(keywords=[kw.strip() for kw in keywords.split(" ") if kw])
 

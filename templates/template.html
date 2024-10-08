@@ -548,12 +548,42 @@
                       });
                   {% endif %}
 
+                  // ---- Interactive functions --------
+
+                  // Open Spotify item link on alt click
                   network.on("selectNode", function (params) {
                     if (params.event.srcEvent.altKey) {
                       if (params.nodes.length === 1) {
                         var node = nodes.get(params.nodes[0]);
                         window.open(node.href, '_blank');
                       }
+                    }
+                  });
+
+                  // Play preview on hover
+                  network.on("hoverNode", function( params ){
+                    const prev_url = this.body.nodes[params.node].options.preview_url;
+                    if (prev_url) {
+                     window.currentAudio = new Audio(prev_url);
+                        setTimeout(function(){
+                            if (window.currentAudio) {
+                                window.currentAudio.play();
+                            }
+                            setTimeout(function(){
+                                if (window.currentAudio) {
+                                    window.currentAudio.pause();
+                                    window.currentAudio.currentTime = 0;
+                                }
+                            }, 30000);
+                        }, 500);
+                       }
+                  });
+
+                  // Stop preview on blur
+                  network.on("blurNode", function (params) {
+                    if (window.currentAudio) {
+                        window.currentAudio.pause();
+                        delete window.test;
                     }
                   });
 

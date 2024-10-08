@@ -26,8 +26,11 @@ class GraphVisualizer:
         self.__network.from_nx(self.__graph)
 
         # set physics options
-        self.__network.options.interaction.zoomSpeed = .5
         self.__network.force_atlas_2based()
+
+        # set interaction options
+        self.__network.options.interaction.zoomSpeed = .5
+        self.__network.options.interaction.hover = True
 
         # temp fix until pyvis href support
         self.__network.templateEnv = Environment(loader=FileSystemLoader(PROJECT_ROOT / "templates"))

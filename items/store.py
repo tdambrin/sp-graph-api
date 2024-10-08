@@ -95,6 +95,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             shape="dot" if not item.images else "circularImage",
             href=item.external_urls.get("spotify", "_blank"),
             image="" if not item.images else item.images[0]["url"],
+            preview_url=item.preview_url if isinstance(item, Track) else None,
             # font="10px arial white",
         )
 
