@@ -13,8 +13,10 @@
 - [x] Preview picture
 - [x] Redirect spotify on alt click
 - [x] Space out nodes - Atlas model
+- [x] Play track preview on hover 
 
 # Version 0.3 - Improve recommendations and UX
-- [ ] The search endpoint accepts a _type_ param that can be either track, album, playlist, etc
-- [ ] Interactive graph - not just 
+- [x] The search endpoint can restrict types to be subsets of track, album, artist
+- [ ] Interactive graph - not just player, update when (un)select types, load progressively
 - [ ] Query 2 levels from any node you click
+- [ ] fix player bug that keeps running when leaving node 

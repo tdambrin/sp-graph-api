@@ -4,7 +4,8 @@ from viz import GraphVisualizer
 from config import OUTPUT_DIR
 
 spotify = SpotifyWrapper()
-graph_key = spotify.search(["khruangbin"], max_depth=2)
+graph_key = spotify.search(["khruangbin"],  max_depth=2)
+# graph_key = spotify.search(["khruangbin"], initial_types=["album"], restricted_types=["album"],  max_depth=2)
 
 graph = ItemStore().get_graph(graph_key)
 

@@ -1,6 +1,7 @@
 import json
 from typing import Any, Dict, List, Tuple
 import functools
+import operator
 
 import items
 from commons import utils
@@ -10,12 +11,27 @@ from .clients import spotify_client
 
 
 class SpotifyWrapper:
+    REC_SIZE = 5  # Recommendation max size for one node
+
     def __init__(self):
         self.__client = spotify_client
 
     @property
     def all_types(self):
-        return ["album", "artist", "playlist", "track", "show", "episode", "audiobook"]
+        return [
+            items.ValidItem.ALBUM.value, items.ValidItem.ARTIST.value, items.ValidItem.TRACK.value,
+            # items.ValidItem.PLAYLIST.value,
+            # items.ValidItem.SHOW.value, items.ValidItem.EPISODE.value, items.ValidItem.AUDIOBOOK.value,
+        ]
+
+    @property
+    def type_rec_weight(self):
+        """ Recommendation weight for each type when several possible """
+        return {
+            items.ValidItem.ALBUM.value: 1, items.ValidItem.ARTIST.value: 1, items.ValidItem.TRACK.value: 3,
+            # items.ValidItem.PLAYLIST.value: 0,
+            # items.ValidItem.SHOW.value: 0, items.ValidItem.EPISODE.value: 0, items.ValidItem.AUDIOBOOK.value: 0,
+        }
 
     @staticmethod
     def cache(name, obj):
@@ -49,12 +65,18 @@ class SpotifyWrapper:
             id of the graph
         """
 
-        if initial_types is None:
-            initial_types = self.all_types
+        initial_types = initial_types or self.all_types
+        restricted_types = restricted_types or self.all_types
         if set(initial_types) - set(self.all_types):
             raise ValueError(
                 "[Error: SpotifyWrapper.search] "
                 f"initial_types={','.join(initial_types)} contains illegal values."
+                f"Accepted values are {','.join(self.all_types)}"
+            )
+        if restricted_types and set(restricted_types) - set(self.all_types):
+            raise ValueError(
+                "[Error: SpotifyWrapper.search] "
+                f"restricted_types={','.join(restricted_types)} contains illegal values."
                 f"Accepted values are {','.join(self.all_types)}"
             )
 
@@ -63,7 +85,7 @@ class SpotifyWrapper:
         # Get spotify results
         query_params = self.__build_search_query(
             keywords=keywords,
-            restricted_types=restricted_types or self.all_types,
+            restricted_types=restricted_types,
         )
 
         if kwargs.get("read_cache"):
@@ -90,45 +112,47 @@ class SpotifyWrapper:
             return graph_key
 
         for item in parsed_items:
-            self.recommend_from_item(
+            self.find_related(
                 graph_key=graph_key,
                 item=item,
                 depth=2,
                 max_depth=max_depth,
+                restricted_types=restricted_types,
                 **kwargs
             )
         return graph_key
 
-    def recommend_from_item(
-            self,
-            graph_key: str,
-            item: items.SpotifyItem,
-            depth: int,
-            max_depth: int,
-            **kwargs,
+    def find_related(
+        self,
+        graph_key: str,
+        item: items.SpotifyItem,
+        depth: int,
+        max_depth: int,
+        restricted_types: List[str],
+        **kwargs
     ):
-        """
-        Get recommendation results from item. Add items to items.ItemStore
-        Args:
-            graph_key (str): id of the graph to add items to
-            item: parsed starting item
-            depth: to recursively recommend from result nodes
-            max_depth: inclusive
-        """
         if depth > max_depth:
             return
+
+        relative_rec_weights = [self.type_rec_weight[_type] for _type in restricted_types]
+        scaled_rec_weights = {
+            _type: scaled_weight
+            for _type, scaled_weight in zip(
+                restricted_types,
+                utils.scale_weights(relative_rec_weights, SpotifyWrapper.REC_SIZE)
+            )
+        }
 
         if kwargs.get("read_cache"):
             recommendation_results = SpotifyWrapper.read_cache(f"recommend_{item.id}.json")
         else:
-            recommendation_results = self._recommend(
-                **item.recommendation_query()
-            )
+            recommendation_results = self.recommend_from_item(item=item, limit_per_type=scaled_rec_weights)
+
         if kwargs.get("write_cache"):
             SpotifyWrapper.cache(f"recommend_{item.id}.json", recommendation_results)
 
         parsed_items = ItemStore().parse_items_from_api_result(
-            graph_key=graph_key,search_results=recommendation_results, depth=depth,
+            graph_key=graph_key, search_results=recommendation_results, depth=depth,
         )
         ItemStore().relate(
             graph_key=graph_key,
@@ -137,15 +161,93 @@ class SpotifyWrapper:
             depth=depth,
         )
         for item in parsed_items:
-            self.recommend_from_item(
+            self.find_related(
                 graph_key=graph_key,
                 item=item,
                 depth=depth+1,
                 max_depth=max_depth,
+                restricted_types=restricted_types,
             )
 
+    def recommend_from_item(
+            self,
+            item: items.SpotifyItem,
+            limit_per_type: Dict[str, int],
+            **kwargs,
+    ):
+        """
+        Get recommendation results from item. Add items to items.ItemStore
+        Args:
+            item: parsed starting item
+            limit_per_type: max results per items type
+        """
+        all_results = {}
+        if limit := limit_per_type.get(items.ValidItem.TRACK.value):
+            all_results = utils.dict_extend(all_results, self._recommend_track(
+                **item.recommendation_query(),
+                limit=limit,
+            ))
+        if limit := limit_per_type.get(items.ValidItem.ALBUM.value):
+            # get artists
+            if item.type == items.ValidItem.ARTIST:
+                artist_ids = [item.id]
+            elif item.type in (items.ValidItem.ALBUM, items.ValidItem.TRACK):
+                artist_ids = [a.id for a in item.artists]
+            else:
+                raise NotImplementedError(
+                    "[Error: SpotifyWrapper.recommend_from_item] "
+                    f"Don't know how to find related albums from item of type {item.type.value}"
+                )
+            # get artists albums
+            all_results = utils.dict_extend(
+                all_results,
+                self._artists_albums(artists_ids=tuple(artist_ids), limit=limit)
+            )
+        if limit := limit_per_type.get(items.ValidItem.ARTIST.value):
+            if item.type == items.ValidItem.ARTIST:
+                artist_ids = [item.id]
+            elif item.type in (items.ValidItem.ALBUM, items.ValidItem.TRACK):
+                artist_ids = [a.id for a in item.artists]
+            else:
+                raise NotImplementedError(
+                    "[Error: SpotifyWrapper.recommend_from_item] "
+                    f"Don't know how to find related artists from item of type {item.type.value}"
+                )
+            all_results = utils.dict_extend(
+                all_results,
+                self._related_artists(artists_ids=tuple(artist_ids), limit=limit)
+            )
+        return all_results
+
     @functools.cache
-    def _recommend(
+    def _related_artists(self, artists_ids: Tuple[str], limit: int = 5, **kwargs) -> Dict[str, Any]:
+        all_related = functools.reduce(operator.add, [
+            self.__client.artist_related_artists(artist_id=artists_id)['artists'] for artists_id in artists_ids
+        ])
+        return {
+            "artists": list({a['id']: a for a in all_related}.values())[:limit]  # removed duplicates
+        }
+
+    @functools.cache
+    def _artists_albums(self, artists_ids: Tuple[str], limit: int = 5, **kwargs) -> Dict[str, Any]:
+        limit_per_artist = utils.scale_weights([1]*len(artists_ids), limit)
+        limit_per_artist = {
+            artist_id: limit_for_artist
+            for artist_id, limit_for_artist in zip(
+                artists_ids,
+                limit_per_artist,
+            )
+        }
+        all_albums = functools.reduce(operator.add, [
+            self.__client.artist_albums(artist_id=artists_id, include_groups="album", limit=limit_for_artist)['items']
+            for artists_id, limit_for_artist in limit_per_artist.items()
+        ])
+        return {
+            "albums": list({a['id']: a for a in all_albums}.values())  # removed duplicates
+        }
+
+    @functools.cache
+    def _recommend_track(
             self,
             seed_artists: Tuple[items.Artist] = None,
             seed_genres: Tuple[str] = None,
