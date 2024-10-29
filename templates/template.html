@@ -562,20 +562,21 @@
 
                   // Play preview on hover
                   network.on("hoverNode", function( params ){
+                    if (window.currentAudio) {
+                      window.currentAudio.pause();
+                    }
                     const prev_url = this.body.nodes[params.node].options.preview_url;
                     if (prev_url) {
-                     window.currentAudio = new Audio(prev_url);
+                        window.currentAudio = new Audio(prev_url);
+                        if (window.currentAudio) {
+                            window.currentAudio.play();
+                        }
                         setTimeout(function(){
                             if (window.currentAudio) {
-                                window.currentAudio.play();
+                                window.currentAudio.pause();
+                                window.currentAudio.currentTime = 0;
                             }
-                            setTimeout(function(){
-                                if (window.currentAudio) {
-                                    window.currentAudio.pause();
-                                    window.currentAudio.currentTime = 0;
-                                }
-                            }, 30000);
-                        }, 500);
+                        }, 30000);
                        }
                   });
 
@@ -583,7 +584,6 @@
                   network.on("blurNode", function (params) {
                     if (window.currentAudio) {
                         window.currentAudio.pause();
-                        delete window.test;
                     }
                   });
 
