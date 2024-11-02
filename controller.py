@@ -6,7 +6,7 @@ from typing import Dict, List
 import items
 from api_clients.wrappers import SpotifyWrapper
 from items.store import ItemStore
-from viz import GraphVisualizer
+from viz import GraphVisualizer, GraphVisualizerSingleton
 from config import OUTPUT_DIR
 
 
@@ -15,16 +15,17 @@ class Controller:
         self._keywords = keywords
         self._selected_types = selected_types
 
-    def get_graph_as_html(self, cache: bool = False, save: bool = False):
+    def set_graph_as_html(self, cache: bool = False, save: bool = False):
         if not self._keywords:
             return '<strong>Enter search keywords to compute the graph </strong>'
+        GraphVisualizerSingleton().set_loading()
 
         if cache:
             graph_key = ItemStore().graph_key_from_keywords(keywords=self._keywords)
             if ItemStore().get_graph(graph_key):
                 res = GraphVisualizer(
                     ItemStore().get_graph(graph_key)
-                ).html_str()
+                ).set_singleton()
                 if save:
                     with open(OUTPUT_DIR / "_".join(self._keywords + ["0", "3"]), "w") as f:
                         f.write(res)
@@ -36,12 +37,13 @@ class Controller:
             initial_types=[_type for _type in self._selected_types if self._selected_types[_type]],
             restricted_types=[_type for _type in self._selected_types if self._selected_types[_type]],
             # read_cache=True,
+            set_singleton=True,
             write_cache=True,
         )
 
         res = GraphVisualizer(
             ItemStore().get_graph(graph_key)
-        ).html_str()
+        ).set_singleton()
 
         if save:
             with open(OUTPUT_DIR / ("_".join(self._keywords + ["0", "3"]) + ".html"), "w") as f:
@@ -59,4 +61,5 @@ if __name__ == "__main__":
             items.ValidItem.TRACK.value: False,
         }
     )
-    c.get_graph_as_html(cache=False, save=True)
+    c.set_graph_as_html(cache=False, save=True)
+    html_graph = GraphVisualizerSingleton().graph_as_html

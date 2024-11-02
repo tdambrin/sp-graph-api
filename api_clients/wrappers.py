@@ -6,6 +6,7 @@ import operator
 import items
 from commons import utils
 from items import ItemStore
+from viz import GraphVisualizerSingleton
 
 from .clients import spotify_client
 
@@ -50,6 +51,7 @@ class SpotifyWrapper:
         initial_types: List[str] = None,
         restricted_types: List[str] = None,
         max_depth: int = 2,
+        set_singleton: bool = False,
         **kwargs,
     ) -> str:
         """
@@ -58,8 +60,9 @@ class SpotifyWrapper:
         Args:
             keywords: search keywords
             initial_types: first level result item type restriction. All if None. NOT_IMPLEMENTED
-            restricted_types: first level result item type restriction. All if None. NOT_IMPLEMENTED
-            max_depth: recommendations start at level 2
+            restricted_types: result items type restriction. All if None.
+            max_depth: recommendations start at level 2, inclusive
+            set_singleton: whether to update the viz singleton view incrementally. False by default.
 
         Returns:
             id of the graph
@@ -106,6 +109,8 @@ class SpotifyWrapper:
             children_ids={parsed_item.id for parsed_item in parsed_items},
             depth=1,
         )
+        if set_singleton:
+            ItemStore().set_singleton_viz(graph_key)
 
         # Expand search
         if max_depth <= 1:
@@ -118,6 +123,7 @@ class SpotifyWrapper:
                 depth=2,
                 max_depth=max_depth,
                 restricted_types=restricted_types,
+                set_singleton=set_singleton,
                 **kwargs
             )
         return graph_key
@@ -129,8 +135,23 @@ class SpotifyWrapper:
         depth: int,
         max_depth: int,
         restricted_types: List[str],
+        set_singleton: bool = False,
         **kwargs
     ):
+        """
+        Find nodes related to a starting node
+        Args:
+            graph_key: to get items from store
+            item: starting item to find related for
+            depth: current depth
+            max_depth: maximum depth allowed, inclusive
+            restricted_types: level result item type restriction. All if None.
+            set_singleton: whether to update the viz singleton view incrementally. False by default.
+            **kwargs:
+
+        Returns:
+
+        """
         if depth > max_depth:
             return
 
@@ -160,6 +181,9 @@ class SpotifyWrapper:
             children_ids={parsed_item.id for parsed_item in parsed_items},
             depth=depth,
         )
+        if set_singleton:
+            ItemStore().set_singleton_viz(graph_key)
+
         for item in parsed_items:
             self.find_related(
                 graph_key=graph_key,
@@ -230,7 +254,7 @@ class SpotifyWrapper:
 
     @functools.cache
     def _artists_albums(self, artists_ids: Tuple[str], limit: int = 5, **kwargs) -> Dict[str, Any]:
-        limit_per_artist = utils.scale_weights([1]*len(artists_ids), limit)
+        limit_per_artist = utils.scale_weights([1]*min(len(artists_ids), limit), limit)
         limit_per_artist = {
             artist_id: limit_for_artist
             for artist_id, limit_for_artist in zip(

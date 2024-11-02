@@ -23,12 +23,14 @@ from . import (
     SpotifyItem,
     ValidItem,
 )
+from viz import GraphVisualizer
 
 
 class ItemStore(metaclass=ThreadSafeSingleton):
     def __init__(self):
         self._items: Dict[str, SpotifyItem] = {}
         self._graphs: Dict[str, nx.DiGraph] = dict()
+        self._current_graph_key = None
 
     @property
     def _items_parser(self) -> Dict[ValidItem, Callable[..., SpotifyItem]]:
@@ -77,6 +79,12 @@ class ItemStore(metaclass=ThreadSafeSingleton):
     def get_graph(self, graph_key: str):
         return self._graphs.get(graph_key)
 
+    def get_current_graph(self):
+        return self._graphs.get(self._current_graph_key)
+
+    def _set_current_graph_key(self, key: str):
+        self._current_graph_key = key
+
     def _add_node(self, graph_key: str, item: SpotifyItem, depth: int = 3):
         """
         Add node to the graph
@@ -105,6 +113,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
 
     def set_query_node(self, query_kw: List[str]) -> str:
         query_key = ItemStore.graph_key_from_keywords(query_kw)
+        self._set_current_graph_key(query_key)
         if self._graphs.get(query_key):
             return query_key
         self._graphs[query_key] = nx.DiGraph()
@@ -119,6 +128,16 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             # font="10px arial white",
         )
         return query_key
+
+    def set_singleton_viz(self, graph_key: str):
+        """
+        Refreshed the visualization singleton with graph from store
+        Args:
+            graph_key: identifies the graph to select
+        """
+        GraphVisualizer(
+            self.get_graph(graph_key)
+        ).set_singleton()
 
     def __parse_item(self, item: Dict[str, Any], item_type: ValidItem) -> SpotifyItem:
         """

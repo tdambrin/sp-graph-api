@@ -17,6 +17,7 @@
 
 # Version 0.3 - Improve recommendations and UX
 - [x] The search endpoint can restrict types to be subsets of track, album, artist
+- [x] Incremental refresh of the graph when search
 - [ ] Interactive graph - not just player, update when (un)select types, load progressively
 - [ ] Query 2 levels from any node you click
 - [x] Fix player bug that keeps running when leaving node 

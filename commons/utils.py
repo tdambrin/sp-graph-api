@@ -59,7 +59,7 @@ def scale_weights(
     if target_sum < len(relative_weights) and include_all:
         raise ValueError(
             "[Error: utils.scale_weights] "
-            "Target sum smaller than number of bins, would result in bins deletion"
+            "Target sum smaller than number of bins, would result in bins deletion "
             f"target_sum={target_sum}, relative_weights: {relative_weights}"
         )
     N = len(relative_weights)

@@ -1,10 +1,12 @@
 from pathlib import Path
 from typing import Union
 
+import streamlit as st
 import networkx as nx
 from pyvis.network import Network
 from jinja2 import Environment, FileSystemLoader
 
+from commons import ThreadSafeSingleton
 from config import PROJECT_ROOT, OUTPUT_DIR
 
 
@@ -42,12 +44,36 @@ class GraphVisualizer:
         html_str = self.__network.generate_html(notebook=False)
         return html_str
 
+    def set_singleton(self) -> str:
+        return GraphVisualizerSingleton().set_graph(self)
+
     @staticmethod
     def show_example():
         g = Network()
         g.from_nx(nx.florentine_families_graph())
         g.show_buttons(filter_=["nodes"])
         g.show(str(OUTPUT_DIR / "example.html"), notebook=False)
+
+
+class GraphVisualizerSingleton(metaclass=ThreadSafeSingleton):
+    DEFAULT = '<strong>Enter search keywords to compute the graph </strong>'
+
+    def __init__(self):
+        self.__graph_as_html = GraphVisualizerSingleton.DEFAULT
+
+    @property
+    def graph_as_html(self):
+        return self.__graph_as_html
+
+    def reset_graph(self):
+        self.__graph_as_html = GraphVisualizerSingleton.DEFAULT
+
+    def set_loading(self):
+        self.__graph_as_html = open(PROJECT_ROOT / "templates" / "loader.html").read()
+
+    def set_graph(self, graph_visualizer: GraphVisualizer) -> str:
+        self.__graph_as_html = graph_visualizer.html_str()
+        return self.__graph_as_html
 
 
 if __name__ == "__main__":
