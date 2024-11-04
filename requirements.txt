@@ -2,6 +2,7 @@ pyyaml
 spotipy
 pyvis
 networkx
-streamlit
+streamlit==1.39.0
 pydantic
 jinja2
+tornado

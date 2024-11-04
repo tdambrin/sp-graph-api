@@ -1,12 +1,11 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-from controller import Controller
 from items import ValidItem
 from viz import GraphVisualizerSingleton
-from commons import with_streamlit_context
-from threading import Thread
+from commons import values_to_str
 
+from api import spg_api_client
 # --- Functions and control vars---
 
 TYPES = {
@@ -16,13 +15,16 @@ TYPES = {
 }
 
 
-@with_streamlit_context
 def launch_search():
-    ctrl = Controller(
-        keywords=[kw.strip() for kw in keywords.split(" ") if kw],
-        selected_types=selected
+    keywords_str = values_to_str(
+        [kw.strip() for kw in keywords.split(" ") if kw],
+        sep="+"
     )
-    Thread(target=ctrl.set_graph_as_html, kwargs={"cache": False, "save": True}).start()
+    selected_str = values_to_str(
+        [type_ for type_, is_selected in selected.items() if is_selected],
+        sep="+"
+    )
+    spg_api_client.request(method="GET", url=f"/api/search/{keywords_str}/{selected_str}")
 
 
 @st.fragment(run_every=1)
