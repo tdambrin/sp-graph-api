@@ -6,7 +6,6 @@ import operator
 import items
 from commons import utils
 from items import ItemStore
-from viz import GraphVisualizerSingleton
 
 from .clients import spotify_client
 
@@ -101,7 +100,7 @@ class SpotifyWrapper:
 
         # Parse and set results to store
         parsed_items = ItemStore().parse_items_from_api_result(
-            graph_key=graph_key, search_results=search_results, depth=1
+            graph_key=graph_key, search_results=search_results, depth=1, selected_types=restricted_types,
         )
         ItemStore().relate(
             graph_key=graph_key,
@@ -173,7 +172,7 @@ class SpotifyWrapper:
             SpotifyWrapper.cache(f"recommend_{item.id}.json", recommendation_results)
 
         parsed_items = ItemStore().parse_items_from_api_result(
-            graph_key=graph_key, search_results=recommendation_results, depth=depth,
+            graph_key=graph_key, search_results=recommendation_results, depth=depth, selected_types=restricted_types,
         )
         ItemStore().relate(
             graph_key=graph_key,

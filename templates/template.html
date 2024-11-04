@@ -552,11 +552,19 @@
 
                   // Open Spotify item link on alt click
                   network.on("selectNode", function (params) {
-                    if (params.event.srcEvent.altKey) {
+                    if (params.event.srcEvent.altKey) {  // open spotify
                       if (params.nodes.length === 1) {
                         var node = nodes.get(params.nodes[0]);
                         window.open(node.href, '_blank');
                       }
+                    } else {  // expand from node
+                      // here
+                      var node = nodes.get(params.nodes[0]);
+                      if (!node.expand_enabled) {
+                        return
+                      }
+                      const url = `http://localhost:8501/api/expand/${node.id}/${node.selected_types}`
+                      fetch(url)
                     }
                   });
 

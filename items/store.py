@@ -70,6 +70,10 @@ class ItemStore(metaclass=ThreadSafeSingleton):
     def graph_keys(self) -> Set[str]:
         return set(self._graphs.keys())
 
+    @property
+    def current_graph_key(self):
+        return self._current_graph_key
+
     def get(self, item_id: str):
         return self._items.get(item_id)
 
@@ -85,13 +89,14 @@ class ItemStore(metaclass=ThreadSafeSingleton):
     def _set_current_graph_key(self, key: str):
         self._current_graph_key = key
 
-    def _add_node(self, graph_key: str, item: SpotifyItem, depth: int = 3):
+    def _add_node(self, graph_key: str, item: SpotifyItem, selected_types: List[str], depth: int = 3):
         """
         Add node to the graph
 
         Args:
             graph_key (str): id of the graph to add item to
             item (items.SpotifyItem): parsed item
+            selected_types (list): item types to add to node
             depth (int): for size styling
         """
         self._graphs[graph_key].add_node(
@@ -104,6 +109,8 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             href=item.external_urls.get("spotify", "_blank"),
             image="" if not item.images else item.images[0]["url"],
             preview_url=item.preview_url if isinstance(item, Track) else None,
+            expand_enabled=item.expand_enabled,
+            selected_types=commons.values_to_str(selected_types, sep="+"),
             # font="10px arial white",
         )
 
@@ -152,7 +159,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         return self._items_parser[item_type](**item)
 
     def __parse_item_with_type(
-            self, graph_key: str, item: Dict[str, Any], item_type: ValidItem, depth: int
+            self, graph_key: str, item: Dict[str, Any], item_type: ValidItem, depth: int, selected_types: List[str],
     ) -> SpotifyItem:
         """
         Parse item and add it to store
@@ -162,6 +169,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             item (dict): item to parse and add
             item_type (one of ValidItem):
             depth (int): depth of node (for styling)
+            selected_types (list): item types to add to node
 
         Returns:
             parsed items.SpotifyItem
@@ -169,7 +177,9 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         if not self._items.get(item["id"]):
             self._items[item["id"]] = self.__parse_item(item=item, item_type=item_type)
         if not self._graphs[graph_key].nodes.get(item["id"]):
-            self._add_node(graph_key=graph_key, item=self._items[item["id"]], depth=depth,)
+            self._add_node(
+                graph_key=graph_key, item=self._items[item["id"]], depth=depth, selected_types=selected_types
+            )
         return self._items[item["id"]]
 
     def parse_items_from_list(self, dict_items: List[Dict[str, Any]], item_type: ValidItem) -> List[SpotifyItem]:
@@ -177,6 +187,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
 
     def parse_items_from_api_result(
             self, graph_key: str, search_results: Dict[str, Any], depth: int,
+            selected_types: List[str] = None,
     ) -> List[SpotifyItem]:
         """
         Parse api result with json objects for potentially all items.SpotifyItem subclasses
@@ -184,10 +195,13 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             graph_key (str): id of the graph to add item to
             search_results (dict): api result with first level keys as spotify items names
             depth (int): for styling when adding to the graph
+            selected_types: results obtained from filtering on these types
 
         Returns:
             list of parsed items.SpotifyItem
         """
+        selected_types = selected_types or [ValidItem.ALBUM.value, ValidItem.ARTIST.value, ValidItem.TRACK.value]
+
         def _items_or_empty(entry: Optional[Dict[str, Any]], entry_type: ValidItem) -> List[Dict[str, Any]]:
             if (not entry) or (isinstance(entry, dict) and not entry.get("items")):
                 return []
@@ -202,8 +216,12 @@ class ItemStore(metaclass=ThreadSafeSingleton):
                 )
         )
 
-        return [self.__parse_item_with_type(**{**item, "graph_key": graph_key, "depth": depth})
-                for item in non_parsed_items]
+        return [
+            self.__parse_item_with_type(**{
+                **item, "graph_key": graph_key, "depth": depth, "selected_types": selected_types
+            })
+            for item in non_parsed_items
+        ]
 
     def relate(self, graph_key: str, parent_id: str, children_ids: Set[str], depth: int):
         """
