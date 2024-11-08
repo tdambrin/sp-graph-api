@@ -15,7 +15,7 @@ import networkx as nx
 import commons
 import config
 from commons.metaclasses import ThreadSafeSingleton
-from . import (
+from items.item import (
     Album,
     Artist,
     Playlist,
@@ -99,6 +99,9 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             selected_types (list): item types to add to node
             depth (int): for size styling
         """
+        optional_kwargs = {}
+        if item.images:
+            optional_kwargs["image"] = item.images[0]["url"]
         self._graphs[graph_key].add_node(
             item.id,
             label=item.name,
@@ -107,10 +110,10 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             color=item.node_color,
             shape="dot" if not item.images else "circularImage",
             href=item.external_urls.get("spotify", "_blank"),
-            image="" if not item.images else item.images[0]["url"],
             preview_url=item.preview_url if isinstance(item, Track) else None,
             expand_enabled=item.expand_enabled,
             selected_types=commons.values_to_str(selected_types, sep="+"),
+            **optional_kwargs,
             # font="10px arial white",
         )
 
