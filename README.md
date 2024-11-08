@@ -18,6 +18,10 @@
 # Version 0.3 - Improve recommendations and UX
 - [x] The search endpoint can restrict types to be subsets of track, album, artist
 - [x] Incremental refresh of the graph when search
-- [ ] Interactive graph - not just player, update when (un)select types, load progressively
 - [x] Query 1 level from any node you click
 - [x] Fix player bug that keeps running when leaving node 
+
+# Version 0.4 - Make it smooth
+- [ ] Refactor in API vs Streamlit (Remove streamlit API wrapper, use fastapi)
+- [ ] Create tasks from Graph JS by calling API and fetch until completed/failed
+- [ ] Interactive graph - not just player, update when (un)select types, load progressively

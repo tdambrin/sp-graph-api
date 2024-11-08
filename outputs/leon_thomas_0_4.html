@@ -1,0 +1,249 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 1200px;
+                 background-color: #ffffff;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%; border: none;">
+            
+            
+            <div id="mynetwork" class="card-body" style="font-weight: bold;"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#1ed760", "expand_enabled": true, "href": "https://open.spotify.com/artist/0nnBZ8FXWjG9wZgM2cpfeb", "id": "0nnBZ8FXWjG9wZgM2cpfeb", "image": "https://i.scdn.co/image/ab6761610000e5ebfa3acb9e964525cbe9e974f5", "label": "Leon Thomas", "preview_url": null, "selected_types": "track+artist", "shape": "circularImage", "size": 30, "title": "Artist - Leon Thomas"}, {"color": "#1ed760", "href": "https://open.spotify.com/search/leon%20thomas", "id": "leon+thomas", "label": "leon thomas", "shape": "circle", "size": 30, "title": "Query node"}, {"color": "#1ed760", "expand_enabled": true, "href": "https://open.spotify.com/artist/5lkc3mRhkYKOJ0ywkbzMmU", "id": "5lkc3mRhkYKOJ0ywkbzMmU", "image": "https://i.scdn.co/image/ab67616d0000b273ad467141c072eccb85c00d83", "label": "Leon Thomas", "preview_url": null, "selected_types": "track+artist", "shape": "circularImage", "size": 30, "title": "Artist - Leon Thomas"}, {"color": "#1ed760", "expand_enabled": true, "href": "https://open.spotify.com/artist/5Z3CI4r6K4WAtl1O1id3HJ", "id": "5Z3CI4r6K4WAtl1O1id3HJ", "image": "https://i.scdn.co/image/ab67616d0000b273a197eb0f024f109053629162", "label": "Leon Thomas III", "preview_url": null, "selected_types": "track+artist", "shape": "circularImage", "size": 30, "title": "Artist - Leon Thomas III"}, {"color": "#1ed760", "expand_enabled": true, "href": "https://open.spotify.com/artist/7tYKF4w9nC0nq9CsPZTHyP", "id": "7tYKF4w9nC0nq9CsPZTHyP", "image": "https://i.scdn.co/image/ab6761610000e5eb0895066d172e1f51f520bc65", "label": "SZA", "preview_url": null, "selected_types": "track+artist", "shape": "circularImage", "size": 30, "title": "Artist - SZA"}, {"color": "#1ed760", "expand_enabled": true, "href": "https://open.spotify.com/artist/3qnGvpP8Yth1AqSBMqON5x", "id": "3qnGvpP8Yth1AqSBMqON5x", "image": "https://i.scdn.co/image/ab6761610000e5ebd5112a5b16a01e971ebb049c", "label": "Leon Bridges", "preview_url": null, "selected_types": "track+artist", "shape": "circularImage", "size": 30, "title": "Artist - Leon Bridges"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/1mh9eHVRdNhzryG43PXdW1", "id": "1mh9eHVRdNhzryG43PXdW1", "label": "MUTT", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 30, "title": "Track - MUTT\nby Leon Thomas"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/2uvE4L5ZsYKpv8hbK4TIOt", "id": "2uvE4L5ZsYKpv8hbK4TIOt", "label": "MUTT", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 30, "title": "Track - MUTT\nby Leon Thomas"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/2fHKzcFXMme56EJMgFsudr", "id": "2fHKzcFXMme56EJMgFsudr", "label": "Crash \u0026 Burn", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 30, "title": "Track - Crash \u0026 Burn\nby Leon Thomas"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/6HlFEOl95vMLEaNe5FDmpM", "id": "6HlFEOl95vMLEaNe5FDmpM", "label": "I DO", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 30, "title": "Track - I DO\nby Leon Thomas"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/2iksjpqL3eraxCBKqNHuqd", "id": "2iksjpqL3eraxCBKqNHuqd", "label": "YES IT IS", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 30, "title": "Track - YES IT IS\nby Leon Thomas"}, {"color": "#1ed760", "expand_enabled": true, "href": "https://open.spotify.com/artist/0ocxWXtgr9tJW60xV5ZufT", "id": "0ocxWXtgr9tJW60xV5ZufT", "image": "https://i.scdn.co/image/ab6761610000e5ebe5a4e775469cc3914405397a", "label": "Isaiah Falls", "preview_url": null, "selected_types": "track+artist", "shape": "circularImage", "size": 20, "title": "Artist - Isaiah Falls"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/7rcIHCRo0d6CZtpwC0cznD", "id": "7rcIHCRo0d6CZtpwC0cznD", "label": "Drifting", "preview_url": "https://p.scdn.co/mp3-preview/5df56a5b0ffcbdeeb21cd7f849c75e54b08ad105?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Drifting\nby Khamari"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/7HUWDK8W290h5FD9G5t3eH", "id": "7HUWDK8W290h5FD9G5t3eH", "label": "Outside", "preview_url": "https://p.scdn.co/mp3-preview/99a0bc76359a8d3d5ed8381d5237b53aaa643219?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Outside\nby Dayo Bello,Odeal"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/4Z973kxz9iOlxwTlCDskpl", "id": "4Z973kxz9iOlxwTlCDskpl", "label": "Nasty", "preview_url": "https://p.scdn.co/mp3-preview/cde26a18b4f2be6129b6a80f6a5735cb6ed3ec26?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Nasty\nby RAAHiiM"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/2N9pTSlybRM6XIqOvSfkM1", "id": "2N9pTSlybRM6XIqOvSfkM1", "label": "Light Work", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Light Work\nby Elmiene"}, {"color": "#1ed760", "expand_enabled": true, "href": "https://open.spotify.com/artist/6nnjKHTxPpJtw08NqB0gvJ", "id": "6nnjKHTxPpJtw08NqB0gvJ", "image": "https://i.scdn.co/image/f6e8436201e47f0d32de2553034593160c82485f", "label": "Andy Bey", "preview_url": null, "selected_types": "track+artist", "shape": "circularImage", "size": 20, "title": "Artist - Andy Bey"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/6wqFXCEOVM2HFeYOyJiutw", "id": "6wqFXCEOVM2HFeYOyJiutw", "label": "Blues For Brother George Jackson", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Blues For Brother George Jackson\nby Archie Shepp"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/6PrvUnbma2yeYKZoF4hpRV", "id": "6PrvUnbma2yeYKZoF4hpRV", "label": "Let\u0027s Stay Together", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Let\u0027s Stay Together\nby Ronnie Foster"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/3gVq3seumqrjlbpVom2TR2", "id": "3gVq3seumqrjlbpVom2TR2", "label": "Psychedelic Pi - Remastered", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Psychedelic Pi - Remastered\nby Dr. Lonnie Smith"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/6meHOAypsCVe61wyYfslqr", "id": "6meHOAypsCVe61wyYfslqr", "label": "Funky Junkie", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Funky Junkie\nby The Blackbyrds"}, {"color": "#1ed760", "expand_enabled": true, "href": "https://open.spotify.com/artist/2OTfr6S2kuHRYStjt1IkY6", "id": "2OTfr6S2kuHRYStjt1IkY6", "image": "https://i.scdn.co/image/ab6761610000e5eb73ce8213e969323cec17549e", "label": "Victoria Justice", "preview_url": null, "selected_types": "track+artist", "shape": "circularImage", "size": 20, "title": "Artist - Victoria Justice"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/4Piy5tqlEWRdxwOjmh3HNk", "id": "4Piy5tqlEWRdxwOjmh3HNk", "label": "You Were My Childhood (Acoustic)", "preview_url": "https://p.scdn.co/mp3-preview/2909d5443bd94961cebb94c415f6b1059b939763?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - You Were My Childhood (Acoustic)\nby Lucas Grabeel"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/75a5fcQSduYyC93gXtgGhk", "id": "75a5fcQSduYyC93gXtgGhk", "label": "Like Me - From \"Teen Beach Movie\"/Soundtrack Version", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Like Me - From \"Teen Beach Movie\"/Soundtrack Version\nby Maia Mitchell,Grace Phipps,Ross Lynch,Spencer Lee,Teen Beach Movie Cast"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/0b60cxLObBFSxEhASUoSnE", "id": "0b60cxLObBFSxEhASUoSnE", "label": "X-Plain It To My Heart", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - X-Plain It To My Heart\nby Drew Seeley"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/3wLppRIVFaHUfMja2qxHCG", "id": "3wLppRIVFaHUfMja2qxHCG", "label": "Song 2 You", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Song 2 You\nby Lindy,Leon Thomas III"}, {"color": "#1ed760", "expand_enabled": true, "href": "https://open.spotify.com/artist/360IAlyVv4PCEVjgyMZrxK", "id": "360IAlyVv4PCEVjgyMZrxK", "image": "https://i.scdn.co/image/ab6761610000e5eb4669166b571594eade778990", "label": "Miguel", "preview_url": null, "selected_types": "track+artist", "shape": "circularImage", "size": 20, "title": "Artist - Miguel"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/2tGvwE8GcFKwNdAXMnlbfl", "id": "2tGvwE8GcFKwNdAXMnlbfl", "label": "happier", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - happier\nby Olivia Rodrigo"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/7GPstnufSTScEaw9dMxO9H", "id": "7GPstnufSTScEaw9dMxO9H", "label": "Childs Play (feat. Chance the Rapper)", "preview_url": "https://p.scdn.co/mp3-preview/27610475d845748ef16131b24db6f47ee2b1cb8c?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Childs Play (feat. Chance the Rapper)\nby SZA,Chance the Rapper"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/5uKHTLXNcftXtYfU7j9cQ6", "id": "5uKHTLXNcftXtYfU7j9cQ6", "label": "I LIKE", "preview_url": "https://p.scdn.co/mp3-preview/4e36fea3860297c44d175335a5b20038fc610e09?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - I LIKE\nby Tory Lanez"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/77geRNo8p4BaEtYPpkeFSD", "id": "77geRNo8p4BaEtYPpkeFSD", "label": "Feel It", "preview_url": "https://p.scdn.co/mp3-preview/91586ca39417b85f6cec4048d7c63fe36ea8056c?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Feel It\nby Jacquees,Lloyd,Rich Homie Quan"}, {"color": "#1ed760", "expand_enabled": true, "href": "https://open.spotify.com/artist/2nTjd2lNo1GVEfXM3bCnsh", "id": "2nTjd2lNo1GVEfXM3bCnsh", "image": "https://i.scdn.co/image/ab6761610000e5ebbaf7e1f882e784750e6d7745", "label": "The Teskey Brothers", "preview_url": null, "selected_types": "track+artist", "shape": "circularImage", "size": 20, "title": "Artist - The Teskey Brothers"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/6nLvaCZFR1wEzW3sIKpsnr", "id": "6nLvaCZFR1wEzW3sIKpsnr", "label": "Valerie - Live At BBC Radio 1 Live Lounge, London / 2007", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Valerie - Live At BBC Radio 1 Live Lounge, London / 2007\nby Amy Winehouse"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/6fGZAk8pyUwKw7E1Eoepkz", "id": "6fGZAk8pyUwKw7E1Eoepkz", "label": "Ain\u0027t No Love In The Heart of The City", "preview_url": "https://p.scdn.co/mp3-preview/9f1c619377aa5b47cba446590cc15b832679c1d8?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Ain\u0027t No Love In The Heart of The City\nby Black Pumas"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/3GdogCZTpPHBODiiEJbqQm", "id": "3GdogCZTpPHBODiiEJbqQm", "label": "Teardrops", "preview_url": "https://p.scdn.co/mp3-preview/972e16191d8a672ffc6829e984545ba13dfc6615?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Teardrops\nby NEIL FRANCES"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/1v6jHij1OfpLui0YSmNTks", "id": "1v6jHij1OfpLui0YSmNTks", "label": "Sweet Water", "preview_url": "https://p.scdn.co/mp3-preview/7f8b34639a754d90864e7806dce49923b2a1a499?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Sweet Water\nby The Meltdown"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/4Da05whk51peIb8nrcdS5j", "id": "4Da05whk51peIb8nrcdS5j", "label": "HONEY", "preview_url": "https://p.scdn.co/mp3-preview/1acb17d068b99b42b57ca72dd8652a924c2caf6c?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - HONEY\nby Isaiah Falls"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/4ceQbaldGMXwkaio2O99ug", "id": "4ceQbaldGMXwkaio2O99ug", "label": "Jealousy", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Jealousy\nby Jordan Ward,Joony"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/6pT0N7rdaCp7Yy8kO1vnZL", "id": "6pT0N7rdaCp7Yy8kO1vnZL", "label": "45", "preview_url": "https://p.scdn.co/mp3-preview/c3edcedcd92e6aac2dc0bebb23103c1aa64646a3?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - 45\nby JEMS!,Elujay,J.Robb"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/4IDfI2BhTm9VZSymDGogk8", "id": "4IDfI2BhTm9VZSymDGogk8", "label": "Furloughed", "preview_url": "https://p.scdn.co/mp3-preview/c2e4e524d754d3b11cf7bf9a4629a30e5cc7c412?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Furloughed\nby Bathe"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/0vbFrb1U7sRV2UhEPCmE3t", "id": "0vbFrb1U7sRV2UhEPCmE3t", "label": "Love Jones (feat. Ty Dolla $ign)", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Love Jones (feat. Ty Dolla $ign)\nby Leon Thomas,Ty Dolla $ign"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/5vAUzRudL3EoXA00646CDp", "id": "5vAUzRudL3EoXA00646CDp", "label": "GOLD ON MY TEETH", "preview_url": "https://p.scdn.co/mp3-preview/40a805ecf263b7f614b492d87e9c94dbe75187e0?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - GOLD ON MY TEETH\nby Isaiah Falls,Clicklak"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/6jbYpRPTEFl1HFKHk1IC0m", "id": "6jbYpRPTEFl1HFKHk1IC0m", "label": "Like Him (feat. Lola Young)", "preview_url": "https://p.scdn.co/mp3-preview/0bafba5309d6657c0f143c2a348ebb68e88273da?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Like Him (feat. Lola Young)\nby Tyler, The Creator,Lola Young"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/7bzliGbnbPivKDr4xTCZON", "id": "7bzliGbnbPivKDr4xTCZON", "label": "Still Blue", "preview_url": "https://p.scdn.co/mp3-preview/d33f16109751739b686984251d739f1055293741?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Still Blue\nby SiR,Jill Scott"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/6pHo3k15lbYuljy5GyZsV2", "id": "6pHo3k15lbYuljy5GyZsV2", "label": "Sun, Moon \u0026 Herbs", "preview_url": "https://p.scdn.co/mp3-preview/4336383fb7a87220dd142ee22a252334d7d4f707?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Sun, Moon \u0026 Herbs\nby Venna,JVCK JAMES"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/78D6dcrsTqWMzD1hfeunkc", "id": "78D6dcrsTqWMzD1hfeunkc", "label": "Nothing On You", "preview_url": "https://p.scdn.co/mp3-preview/957ce7ab6d9ac98545d2ec176e272080c693497a?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Nothing On You\nby Marie Dahlstrom,Odeal"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/68C9gWyluR2XVj9r2dppsC", "id": "68C9gWyluR2XVj9r2dppsC", "label": "Hills", "preview_url": "https://p.scdn.co/mp3-preview/47b816f5a1f8197704ceb76fcaa84b4a83e39bcf?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Hills\nby Naomi Sharon"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/7eh6esjOCkDkcYU31h6few", "id": "7eh6esjOCkDkcYU31h6few", "label": "Drake and Drive", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Drake and Drive\nby Ambr\u00e9"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/1exOXO4MAaMNR7Vqy5p0VO", "id": "1exOXO4MAaMNR7Vqy5p0VO", "label": "Rather Be Alone", "preview_url": "https://p.scdn.co/mp3-preview/c8de9eefa908e4d0e73c8d158cc69043d6902d3f?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Rather Be Alone\nby BETTY BROWN"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/2oCNvjR0wSsPzfDxmcoyqb", "id": "2oCNvjR0wSsPzfDxmcoyqb", "label": "Fallin 4 Ya Luv", "preview_url": "https://p.scdn.co/mp3-preview/983619e255f1715e621476af358586e4f2ecbba3?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Fallin 4 Ya Luv\nby Flwr Chyld,Grimm Lynn"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/4kWTZ679UP8EUjlOiph07n", "id": "4kWTZ679UP8EUjlOiph07n", "label": "Bossy", "preview_url": "https://p.scdn.co/mp3-preview/f9540ada2b4554a4fd3ad60f5fe6f7b1c8cab41e?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Bossy\nby BINA."}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/1NlWBpNYAnFT7gMGyC0Y1M", "id": "1NlWBpNYAnFT7gMGyC0Y1M", "label": "Sandstorm (feat. JID)", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Sandstorm (feat. JID)\nby Mereba,JID"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/6u7nuBZnO53vy8Kmpc6kEU", "id": "6u7nuBZnO53vy8Kmpc6kEU", "label": "Know Better (feat. Lil\u0027 Mo \u0026 Vince Staples)", "preview_url": "https://p.scdn.co/mp3-preview/93ea98bd5fc9a63b5cb0540cee3a5e9a6edfb862?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Know Better (feat. Lil\u0027 Mo \u0026 Vince Staples)\nby Kehlani,Lil\u0027 Mo,Vince Staples"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/5SYRV3ZUtL5IkMu2GpDGAt", "id": "5SYRV3ZUtL5IkMu2GpDGAt", "label": "Jetlagged", "preview_url": "https://p.scdn.co/mp3-preview/bf876a2e4866b78b4692507a8bb3057a0cca15c4?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - Jetlagged\nby Bathe"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/3A75RXF6osQ8vLMSMbNJ9r", "id": "3A75RXF6osQ8vLMSMbNJ9r", "label": "New Lover", "preview_url": null, "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - New Lover\nby Maeta"}, {"color": "#b1e6c4", "expand_enabled": true, "href": "https://open.spotify.com/track/1MwXXI0buiiwEsZ9d6RBZ9", "id": "1MwXXI0buiiwEsZ9d6RBZ9", "label": "NARCISSIST?", "preview_url": "https://p.scdn.co/mp3-preview/f10ea73276c897901fafeb7a6a38bac94e34cca7?cid=79537c50f04649c4b60c2d521e0bff14", "selected_types": "track+artist", "shape": "dot", "size": 20, "title": "Track - NARCISSIST?\nby Dylan Sinclair"}]);
+                  edges = new vis.DataSet([{"from": "0nnBZ8FXWjG9wZgM2cpfeb", "to": "leon+thomas", "width": 1}, {"from": "5lkc3mRhkYKOJ0ywkbzMmU", "to": "leon+thomas", "width": 1}, {"from": "5Z3CI4r6K4WAtl1O1id3HJ", "to": "leon+thomas", "width": 1}, {"from": "7tYKF4w9nC0nq9CsPZTHyP", "to": "leon+thomas", "width": 1}, {"from": "3qnGvpP8Yth1AqSBMqON5x", "to": "leon+thomas", "width": 1}, {"from": "1mh9eHVRdNhzryG43PXdW1", "to": "leon+thomas", "width": 1}, {"from": "2uvE4L5ZsYKpv8hbK4TIOt", "to": "leon+thomas", "width": 1}, {"from": "2fHKzcFXMme56EJMgFsudr", "to": "leon+thomas", "width": 1}, {"from": "6HlFEOl95vMLEaNe5FDmpM", "to": "leon+thomas", "width": 1}, {"from": "2iksjpqL3eraxCBKqNHuqd", "to": "leon+thomas", "width": 1}, {"from": "0ocxWXtgr9tJW60xV5ZufT", "to": "0nnBZ8FXWjG9wZgM2cpfeb", "width": 1}, {"from": "0ocxWXtgr9tJW60xV5ZufT", "to": "1mh9eHVRdNhzryG43PXdW1", "width": 1}, {"from": "0ocxWXtgr9tJW60xV5ZufT", "to": "2uvE4L5ZsYKpv8hbK4TIOt", "width": 1}, {"from": "0ocxWXtgr9tJW60xV5ZufT", "to": "2fHKzcFXMme56EJMgFsudr", "width": 1}, {"from": "0ocxWXtgr9tJW60xV5ZufT", "to": "6HlFEOl95vMLEaNe5FDmpM", "width": 1}, {"from": "0ocxWXtgr9tJW60xV5ZufT", "to": "2iksjpqL3eraxCBKqNHuqd", "width": 1}, {"from": "7rcIHCRo0d6CZtpwC0cznD", "to": "0nnBZ8FXWjG9wZgM2cpfeb", "width": 1}, {"from": "7HUWDK8W290h5FD9G5t3eH", "to": "0nnBZ8FXWjG9wZgM2cpfeb", "width": 1}, {"from": "4Z973kxz9iOlxwTlCDskpl", "to": "0nnBZ8FXWjG9wZgM2cpfeb", "width": 1}, {"from": "2N9pTSlybRM6XIqOvSfkM1", "to": "0nnBZ8FXWjG9wZgM2cpfeb", "width": 1}, {"from": "6nnjKHTxPpJtw08NqB0gvJ", "to": "5lkc3mRhkYKOJ0ywkbzMmU", "width": 1}, {"from": "6wqFXCEOVM2HFeYOyJiutw", "to": "5lkc3mRhkYKOJ0ywkbzMmU", "width": 1}, {"from": "6PrvUnbma2yeYKZoF4hpRV", "to": "5lkc3mRhkYKOJ0ywkbzMmU", "width": 1}, {"from": "3gVq3seumqrjlbpVom2TR2", "to": "5lkc3mRhkYKOJ0ywkbzMmU", "width": 1}, {"from": "6meHOAypsCVe61wyYfslqr", "to": "5lkc3mRhkYKOJ0ywkbzMmU", "width": 1}, {"from": "2OTfr6S2kuHRYStjt1IkY6", "to": "5Z3CI4r6K4WAtl1O1id3HJ", "width": 1}, {"from": "4Piy5tqlEWRdxwOjmh3HNk", "to": "5Z3CI4r6K4WAtl1O1id3HJ", "width": 1}, {"from": "75a5fcQSduYyC93gXtgGhk", "to": "5Z3CI4r6K4WAtl1O1id3HJ", "width": 1}, {"from": "0b60cxLObBFSxEhASUoSnE", "to": "5Z3CI4r6K4WAtl1O1id3HJ", "width": 1}, {"from": "3wLppRIVFaHUfMja2qxHCG", "to": "5Z3CI4r6K4WAtl1O1id3HJ", "width": 1}, {"from": "360IAlyVv4PCEVjgyMZrxK", "to": "7tYKF4w9nC0nq9CsPZTHyP", "width": 1}, {"from": "2tGvwE8GcFKwNdAXMnlbfl", "to": "7tYKF4w9nC0nq9CsPZTHyP", "width": 1}, {"from": "7GPstnufSTScEaw9dMxO9H", "to": "7tYKF4w9nC0nq9CsPZTHyP", "width": 1}, {"from": "5uKHTLXNcftXtYfU7j9cQ6", "to": "7tYKF4w9nC0nq9CsPZTHyP", "width": 1}, {"from": "77geRNo8p4BaEtYPpkeFSD", "to": "7tYKF4w9nC0nq9CsPZTHyP", "width": 1}, {"from": "2nTjd2lNo1GVEfXM3bCnsh", "to": "3qnGvpP8Yth1AqSBMqON5x", "width": 1}, {"from": "6nLvaCZFR1wEzW3sIKpsnr", "to": "3qnGvpP8Yth1AqSBMqON5x", "width": 1}, {"from": "6fGZAk8pyUwKw7E1Eoepkz", "to": "3qnGvpP8Yth1AqSBMqON5x", "width": 1}, {"from": "3GdogCZTpPHBODiiEJbqQm", "to": "3qnGvpP8Yth1AqSBMqON5x", "width": 1}, {"from": "1v6jHij1OfpLui0YSmNTks", "to": "3qnGvpP8Yth1AqSBMqON5x", "width": 1}, {"from": "4Da05whk51peIb8nrcdS5j", "to": "1mh9eHVRdNhzryG43PXdW1", "width": 1}, {"from": "4ceQbaldGMXwkaio2O99ug", "to": "1mh9eHVRdNhzryG43PXdW1", "width": 1}, {"from": "6pT0N7rdaCp7Yy8kO1vnZL", "to": "1mh9eHVRdNhzryG43PXdW1", "width": 1}, {"from": "4IDfI2BhTm9VZSymDGogk8", "to": "1mh9eHVRdNhzryG43PXdW1", "width": 1}, {"from": "0vbFrb1U7sRV2UhEPCmE3t", "to": "2uvE4L5ZsYKpv8hbK4TIOt", "width": 1}, {"from": "5vAUzRudL3EoXA00646CDp", "to": "2uvE4L5ZsYKpv8hbK4TIOt", "width": 1}, {"from": "6jbYpRPTEFl1HFKHk1IC0m", "to": "2uvE4L5ZsYKpv8hbK4TIOt", "width": 1}, {"from": "7bzliGbnbPivKDr4xTCZON", "to": "2uvE4L5ZsYKpv8hbK4TIOt", "width": 1}, {"from": "6pHo3k15lbYuljy5GyZsV2", "to": "2fHKzcFXMme56EJMgFsudr", "width": 1}, {"from": "78D6dcrsTqWMzD1hfeunkc", "to": "2fHKzcFXMme56EJMgFsudr", "width": 1}, {"from": "68C9gWyluR2XVj9r2dppsC", "to": "2fHKzcFXMme56EJMgFsudr", "width": 1}, {"from": "7eh6esjOCkDkcYU31h6few", "to": "2fHKzcFXMme56EJMgFsudr", "width": 1}, {"from": "1exOXO4MAaMNR7Vqy5p0VO", "to": "6HlFEOl95vMLEaNe5FDmpM", "width": 1}, {"from": "2oCNvjR0wSsPzfDxmcoyqb", "to": "6HlFEOl95vMLEaNe5FDmpM", "width": 1}, {"from": "4kWTZ679UP8EUjlOiph07n", "to": "6HlFEOl95vMLEaNe5FDmpM", "width": 1}, {"from": "1NlWBpNYAnFT7gMGyC0Y1M", "to": "6HlFEOl95vMLEaNe5FDmpM", "width": 1}, {"from": "6u7nuBZnO53vy8Kmpc6kEU", "to": "2iksjpqL3eraxCBKqNHuqd", "width": 1}, {"from": "5SYRV3ZUtL5IkMu2GpDGAt", "to": "2iksjpqL3eraxCBKqNHuqd", "width": 1}, {"from": "3A75RXF6osQ8vLMSMbNJ9r", "to": "2iksjpqL3eraxCBKqNHuqd", "width": 1}, {"from": "1MwXXI0buiiwEsZ9d6RBZ9", "to": "2iksjpqL3eraxCBKqNHuqd", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false,
+        "hover": true,
+        "zoomSpeed": 0.5
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.01,
+            "damping": 0.4,
+            "gravitationalConstant": -50,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  // ---- Interactive functions --------
+
+                  async function check_status(task_id) {
+                    const url = `http://localhost:8502/api/tasks/${task_id}/status`;
+                    console.log(`calling status for task ${task_id}`);
+                    response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    if (!response.ok) {
+                      throw new Error(`Response status: ${response.status}`);
+                    }
+                    const resp_body = await response.json();
+                    console.log(resp_body);
+                    if (resp_body.hasOwnProperty('status')) {
+                        if (resp_body['status'] === 'completed') {
+                            const nodes = resp_body['result'];
+                            console.log(`handling result ${nodes}`);
+                            return
+                        } else if (resp_body['status'] !== 'failed') {
+                            console.log('Scheduling next status check');
+                            setTimeout(check_status, 1000, task_id);
+                        }
+                    }
+                  };
+
+                  // Expand from node
+                  network.on("doubleClick", function (params) {
+                    var node = nodes.get(params.nodes[0]);
+                    if (!node.expand_enabled) {
+                      return
+                    }
+                    const url = `http://localhost:8502/api/expand/${node.id}/${node.selected_types}`
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const task_id = 'my_task_id';
+                    setTimeout(check_status, 1000, task_id);
+                  });
+
+                  // Open Spotify item link on alt click
+                  network.on("selectNode", function (params) {
+                    if (params.event.srcEvent.altKey) {  // open spotify
+                      if (params.nodes.length === 1) {
+                        var node = nodes.get(params.nodes[0]);
+                        window.open(node.href, '_blank');
+                      }
+                    }
+                  });
+
+                  // Play preview on hover
+                  network.on("hoverNode", function( params ){
+                    if (window.currentAudio) {
+                      window.currentAudio.pause();
+                    }
+                    const prev_url = this.body.nodes[params.node].options.preview_url;
+                    if (prev_url) {
+                        window.currentAudio = new Audio(prev_url);
+                        if (window.currentAudio) {
+                            window.currentAudio.play();
+                        }
+                        setTimeout(function(){
+                            if (window.currentAudio) {
+                                window.currentAudio.pause();
+                                window.currentAudio.currentTime = 0;
+                            }
+                        }, 30000);
+                       }
+                  });
+
+                  // Stop preview on blur
+                  network.on("blurNode", function (params) {
+                    if (window.currentAudio) {
+                        window.currentAudio.pause();
+                    }
+                  });
+
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

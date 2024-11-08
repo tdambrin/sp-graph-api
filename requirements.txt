@@ -5,4 +5,7 @@ networkx
 streamlit==1.39.0
 pydantic
 jinja2
-tornado
+tornado # to be removed
+# Api
+uvicorn
+fastapi

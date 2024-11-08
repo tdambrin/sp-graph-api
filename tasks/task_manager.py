@@ -1,16 +1,18 @@
 """
-Graph search and viz controller for UI
+Task Manager to instantiate and handle tasks
 """
 from typing import List
+import uuid
 
 import items
 from api_clients.wrappers import SpotifyWrapper
 from items.store import ItemStore
 from viz import GraphVisualizer, GraphVisualizerSingleton
 from config import OUTPUT_DIR
+from tasks.task import Task
 
 
-class Controller:
+class TaskManager:
     def __init__(self, selected_types: List[str] = None):
         self._selected_types = selected_types
 
@@ -36,7 +38,7 @@ class Controller:
                     ItemStore().get_graph(graph_key)
                 ).set_singleton()
                 if save:
-                    with open(OUTPUT_DIR / "_".join(keywords + ["0", "3"]), "w") as f:
+                    with open(OUTPUT_DIR / "_".join(keywords + ["0", "4"]), "w") as f:
                         f.write(res)
                 return res
 
@@ -55,10 +57,31 @@ class Controller:
         ).set_singleton()
 
         if save:
-            with open(OUTPUT_DIR / ("_".join(keywords + ["0", "3"]) + ".html"), "w") as f:
+            with open(OUTPUT_DIR / ("_".join(keywords + ["0", "4"]) + ".html"), "w") as f:
                 f.write(res)
 
         return res
+
+    def start_expand_task(self, node_id: str, save: bool = False):
+        """
+        Start the task in a thread and return task id
+        Args:
+            node_id: node from which to expand
+            save: whether to save the html graph as a result (default false)
+
+        Returns:
+            task id
+        """
+        task_id = "my_task_id"  # str(uuid.uuid4())
+        task = Task(
+            target=self.expand_from_node,
+            task_uuid=task_id,
+            use_threading=True,
+            node_id=node_id,
+            save=save,
+        )
+        task.run()
+        return task_id
 
     def expand_from_node(self, node_id: str, save: bool = False) -> str:
         """
@@ -72,7 +95,7 @@ class Controller:
         """
 
         store = ItemStore()
-        current_graph_key = store.current_graph_key
+        current_graph_key = store.current_graph_key  # to make a query param
         item = store.get(item_id=node_id)
         if not item.expand_enabled:
             return GraphVisualizerSingleton().graph_as_html
@@ -90,12 +113,12 @@ class Controller:
         ).set_singleton()
 
         if save:
-            with open(OUTPUT_DIR / ("_".join([current_graph_key, "0", "3"]) + ".html"), "w") as f:
+            with open(OUTPUT_DIR / ("_".join([current_graph_key, "0", "4"]) + ".html"), "w") as f:
                 f.write(res)
 
 
 if __name__ == "__main__":
-    c = Controller(
+    c = TaskManager(
         selected_types=[
             items.ValidItem.ALBUM.value,
             items.ValidItem.ARTIST.value,

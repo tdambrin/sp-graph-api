@@ -8,6 +8,22 @@ from commons import values_to_str
 from api import spg_api_client
 # --- Functions and control vars---
 
+# Fast API
+import uvicorn
+import threading
+from api_v2 import api_v2
+threading.Thread(
+    target=uvicorn.run,
+    kwargs={
+        "app": api_v2,
+        "host": "127.0.0.1",
+        "port": 8502,
+        "log_level": "info",
+
+    },
+).start()
+# End Fast API
+
 TYPES = {
     ValidItem.ALBUM.value,
     ValidItem.ARTIST.value,

@@ -550,6 +550,49 @@
 
                   // ---- Interactive functions --------
 
+                  async function check_status(task_id) {
+                    const url = `http://localhost:8502/api/tasks/${task_id}/status`;
+                    console.log(`calling status for task ${task_id}`);
+                    response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    if (!response.ok) {
+                      throw new Error(`Response status: ${response.status}`);
+                    }
+                    const resp_body = await response.json();
+                    console.log(resp_body);
+                    if (resp_body.hasOwnProperty('status')) {
+                        if (resp_body['status'] === 'completed') {
+                            const nodes = resp_body['result'];
+                            console.log(`handling result ${nodes}`);
+                            return
+                        } else if (resp_body['status'] !== 'failed') {
+                            console.log('Scheduling next status check');
+                            setTimeout(check_status, 1000, task_id);
+                        }
+                    }
+                  };
+
+                  // Expand from node
+                  network.on("doubleClick", function (params) {
+                    var node = nodes.get(params.nodes[0]);
+                    if (!node.expand_enabled) {
+                      return
+                    }
+                    const url = `http://localhost:8502/api/expand/${node.id}/${node.selected_types}`
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const task_id = 'my_task_id';
+                    setTimeout(check_status, 1000, task_id);
+                  });
+
                   // Open Spotify item link on alt click
                   network.on("selectNode", function (params) {
                     if (params.event.srcEvent.altKey) {  // open spotify
@@ -557,14 +600,6 @@
                         var node = nodes.get(params.nodes[0]);
                         window.open(node.href, '_blank');
                       }
-                    } else {  // expand from node
-                      // here
-                      var node = nodes.get(params.nodes[0]);
-                      if (!node.expand_enabled) {
-                        return
-                      }
-                      const url = `http://localhost:8501/api/expand/${node.id}/${node.selected_types}`
-                      fetch(url)
                     }
                   });
 
@@ -594,6 +629,7 @@
                         window.currentAudio.pause();
                     }
                   });
+
 
                   return network;
 
