@@ -30,22 +30,13 @@ class TaskManager:
         if not keywords:
             return '<strong>Enter search keywords to compute the graph </strong>'
         GraphVisualizerSingleton().set_loading()
-
-        if cache:
-            graph_key = ItemStore().graph_key_from_keywords(keywords=keywords)
-            if ItemStore().get_graph(graph_key):
-                res = GraphVisualizer(
-                    ItemStore().get_graph(graph_key)
-                ).set_singleton()
-                if save:
-                    with open(OUTPUT_DIR / "_".join(keywords + ["0", "4"]), "w") as f:
-                        f.write(res)
-                return res
+        self._init_query_graph(
+            keywords=keywords,
+        )
 
         graph_key = SpotifyWrapper().search(
             keywords=keywords,
             max_depth=2,
-            initial_types=self._selected_types,
             restricted_types=self._selected_types,
             # read_cache=True,
             set_singleton=True,
@@ -61,6 +52,23 @@ class TaskManager:
                 f.write(res)
 
         return res
+
+    @staticmethod
+    def _init_query_graph(
+        keywords: List[str],
+    ) -> str:
+        """
+        Initialize query graph with a query node
+
+        Args:
+            keywords: list of search keywords
+
+        Returns:
+            graph key
+        """
+        task_id = "search_task"  # str(uuid.uuid4())
+        graph_key = ItemStore().set_query_node(query_kw=keywords, task_id=task_id)
+        return graph_key
 
     def start_expand_task(self, node_id: str, save: bool = False):
         """

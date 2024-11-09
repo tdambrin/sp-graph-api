@@ -550,6 +550,13 @@
 
                   // ---- Interactive functions --------
 
+                  function handle_task_result(body) {
+                    var new_nodes = body.nodes;
+                    new_nodes.forEach( new_node => {if (!nodes.getIds().includes(new_node.id)) {nodes.add(new_node)}});
+                    var new_edges = body.edges;
+                    new_edges.forEach( new_edge => {if (!edges.getIds().includes(new_edge.id)) {edges.push(new_edge)}});
+                  }
+
                   async function check_status(task_id) {
                     const url = `http://localhost:8502/api/tasks/${task_id}/status`;
                     console.log(`calling status for task ${task_id}`);
@@ -563,13 +570,14 @@
                       throw new Error(`Response status: ${response.status}`);
                     }
                     const resp_body = await response.json();
-                    console.log(resp_body);
                     if (resp_body.hasOwnProperty('status')) {
-                        if (resp_body['status'] === 'completed') {
+                        if (resp_body.status === 'completed') {
                             const nodes = resp_body['result'];
                             console.log(`handling result ${nodes}`);
+                            handle_task_result(body);
                             return
-                        } else if (resp_body['status'] !== 'failed') {
+                        }
+                        if (resp_body.status !== 'failed') {
                             console.log('Scheduling next status check');
                             setTimeout(check_status, 1000, task_id);
                         }
@@ -630,6 +638,14 @@
                     }
                   });
 
+                  // Schedule search task refresh
+                  const query_node = nodes.get({
+                          filter: function(node) {
+                            return node.title === 'Query';
+                          }
+                   })[0];
+                  const search_task_id = query_node.task_id; // 'search_task';
+                  setTimeout(check_status, 2000, query_node.task_id);
 
                   return network;
 

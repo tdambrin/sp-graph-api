@@ -47,7 +47,6 @@ class SpotifyWrapper:
     def search(
         self,
         keywords: List[str],
-        initial_types: List[str] = None,
         restricted_types: List[str] = None,
         max_depth: int = 2,
         set_singleton: bool = False,
@@ -58,7 +57,6 @@ class SpotifyWrapper:
 
         Args:
             keywords: search keywords
-            initial_types: first level result item type restriction. All if None. NOT_IMPLEMENTED
             restricted_types: result items type restriction. All if None.
             max_depth: recommendations start at level 2, inclusive
             set_singleton: whether to update the viz singleton view incrementally. False by default.
@@ -66,23 +64,13 @@ class SpotifyWrapper:
         Returns:
             id of the graph
         """
-
-        initial_types = initial_types or self.all_types
         restricted_types = restricted_types or self.all_types
-        if set(initial_types) - set(self.all_types):
-            raise ValueError(
-                "[Error: SpotifyWrapper.search] "
-                f"initial_types={','.join(initial_types)} contains illegal values."
-                f"Accepted values are {','.join(self.all_types)}"
-            )
         if restricted_types and set(restricted_types) - set(self.all_types):
             raise ValueError(
                 "[Error: SpotifyWrapper.search] "
                 f"restricted_types={','.join(restricted_types)} contains illegal values."
                 f"Accepted values are {','.join(self.all_types)}"
             )
-
-        graph_key = ItemStore().set_query_node(keywords)
 
         # Get spotify results
         query_params = self.__build_search_query(

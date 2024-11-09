@@ -121,7 +121,16 @@ class ItemStore(metaclass=ThreadSafeSingleton):
     def graph_key_from_keywords(keywords: List[str]):
         return commons.values_to_str(keywords, "+")
 
-    def set_query_node(self, query_kw: List[str]) -> str:
+    def set_query_node(self, query_kw: List[str], task_id: str) -> str:
+        """
+        Set graph central query node
+        Args:
+            query_kw: keywords used for the search
+            task_id: task id corresponding to the search
+
+        Returns:
+            Graph key
+        """
         query_key = ItemStore.graph_key_from_keywords(query_kw)
         self._set_current_graph_key(query_key)
         if self._graphs.get(query_key):
@@ -129,12 +138,13 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         self._graphs[query_key] = nx.DiGraph()
         self._graphs[query_key].add_node(
             query_key,
-            label=" ".join(query_kw),
-            title="Query node",
+            label=commons.values_to_str(query_kw, sep=" "),
+            title="Query",
             size=30,
             color=config.NodeColor.PRIMARY.value,
             shape="circle",
             href=f"https://open.spotify.com/search/{'%20'.join(query_kw)}",
+            task_id=task_id,
             # font="10px arial white",
         )
         return query_key
@@ -236,6 +246,6 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             children_ids (List[str]): list of node ids relate parent item with
             depth (int): for styling when adding to the graph
         """
-        for children_id in children_ids:
+        for child_id in children_ids:
             # children first for color
-            self._graphs[graph_key].add_edge(children_id, parent_id, weight=self._depth_edge_weight(depth))
+            self._graphs[graph_key].add_edge(child_id, parent_id, weight=self._depth_edge_weight(depth), id=f"{parent_id}_{child_id}")
