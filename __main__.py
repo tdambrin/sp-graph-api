@@ -14,6 +14,7 @@ keywords_ = keywords.split(" ")
 ctrl = TaskManager(selected_types=selected_types)
 result = ctrl.search_task(keywords=keywords_, save=True)
 filename = OUTPUT_DIR / ("_".join(["main_result", *keywords, "0", "4"]) + ".html")
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 with open(
     filename,
     "w",

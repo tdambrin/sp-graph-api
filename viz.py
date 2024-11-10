@@ -88,6 +88,7 @@ class GraphVisualizer:
         g = Network()
         g.from_nx(nx.florentine_families_graph())
         g.show_buttons(filter_=["nodes"])
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         g.show(str(OUTPUT_DIR / "example.html"), notebook=False)
 
 

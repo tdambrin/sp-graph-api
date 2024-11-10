@@ -41,7 +41,9 @@ class SpotifyWrapper:
     def cache(name, obj):
         from config import PROJECT_ROOT
 
-        with open(PROJECT_ROOT / "responses" / name, "w") as f:
+        response_dir = PROJECT_ROOT / "responses"
+        response_dir.mkdir(parents=True, exist_ok=True)
+        with open(response_dir / name, "w") as f:
             json.dump(obj, f)
 
     @staticmethod

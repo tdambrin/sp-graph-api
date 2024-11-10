@@ -76,6 +76,7 @@ class TaskManager:
         current_graph = ItemStore().get_graph(graph_key=graph_key)
 
         if save:
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
             with open(
                 OUTPUT_DIR / ("_".join([graph_key, "0", "4"]) + ".html"), "w"
             ) as f:
@@ -160,6 +161,7 @@ class TaskManager:
         current_graph = ItemStore().get_graph(graph_key=current_graph_key)
 
         if save:
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
             with open(
                 OUTPUT_DIR / ("_".join([current_graph_key, "0", "4"]) + ".html"),
                 "w",
