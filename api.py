@@ -2,10 +2,13 @@ from typing import List
 
 import commons
 import config
+import constants
 from commons import str_to_values
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from tasks import StatusManager, TaskManager
+from items import ItemStore
+from status import StatusManager
+from tasks import TaskManager
 
 spg_api = FastAPI()
 
@@ -44,6 +47,20 @@ def start_expand(node_id: str, selected_types: str):
 @spg_api.get("/api/tasks/{task_id}/status")
 def get_task_status(task_id: str):
     return StatusManager().get_status_and_result(task_id=task_id)
+
+
+@spg_api.get("api/items")
+def get_current_items():
+    current_graph = ItemStore().get_current_graph()
+    return {
+        "nodes": commons.nodes_edges_to_list_of_dict(current_graph, constants.NODES),
+        "edges": commons.nodes_edges_to_list_of_dict(current_graph, constants.EDGES),
+    }
+
+
+@spg_api.get("api/nodes/{node_id}")
+def get_node(node_id: str):
+    return {"node": ItemStore().get(node_id)}
 
 
 if __name__ == "__main__":

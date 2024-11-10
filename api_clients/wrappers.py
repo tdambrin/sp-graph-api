@@ -56,6 +56,7 @@ class SpotifyWrapper:
         graph_key: str,
         restricted_types: Optional[List[str]] = None,
         max_depth: int = 2,
+        task_id: Optional[str] = None,
         **kwargs,
     ) -> str:
         """
@@ -66,6 +67,7 @@ class SpotifyWrapper:
             graph_key: key of the graph it corresponds to in the store
             restricted_types: result items type restriction. All if None.
             max_depth: recommendations start at level 2, inclusive
+            task_id (str): if provided, set intermediate results to task
 
         Returns:
             id of the graph
@@ -100,12 +102,14 @@ class SpotifyWrapper:
             search_results=search_results,
             depth=1,
             selected_types=restricted_types,
+            task_id=task_id,
         )
         ItemStore().relate(
             graph_key=graph_key,
             parent_id=graph_key,
             children_ids={parsed_item.id for parsed_item in parsed_items},
             depth=1,
+            task_id=task_id,
         )
 
         # Expand search
@@ -119,6 +123,7 @@ class SpotifyWrapper:
                 depth=2,
                 max_depth=max_depth,
                 restricted_types=restricted_types,
+                task_id=task_id,
                 **kwargs,
             )
         return graph_key
@@ -130,6 +135,7 @@ class SpotifyWrapper:
         depth: int,
         max_depth: int,
         restricted_types: List[str],
+        task_id: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -140,6 +146,7 @@ class SpotifyWrapper:
             depth: current depth
             max_depth: maximum depth allowed, inclusive
             restricted_types: level result item type restriction. All if None.
+            task_id (str): if provided, set intermediate results to task
             **kwargs:
 
         Returns:
@@ -176,12 +183,14 @@ class SpotifyWrapper:
             search_results=recommendation_results,
             depth=depth,
             selected_types=restricted_types,
+            task_id=task_id,
         )
         ItemStore().relate(
             graph_key=graph_key,
             parent_id=item.id,
             children_ids={parsed_item.id for parsed_item in parsed_items},
             depth=depth,
+            task_id=task_id,
         )
 
         for item in parsed_items:
@@ -191,6 +200,7 @@ class SpotifyWrapper:
                 depth=depth + 1,
                 max_depth=max_depth,
                 restricted_types=restricted_types,
+                task_id=task_id,
             )
 
     def recommend_from_item(

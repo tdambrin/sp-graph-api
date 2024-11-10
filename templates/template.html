@@ -550,6 +550,12 @@
 
                   // ---- Interactive functions --------
 
+                  const asyncTimeout = (ms) => {
+                    return new Promise((resolve) => {
+                      setTimeout(resolve, ms);
+                    });
+                  };
+
                   function handle_task_result(body) {
                     var new_nodes = body.nodes;
                     new_nodes.forEach( new_node => {if (!nodes.getIds().includes(new_node.id)) {nodes.add(new_node)}});
@@ -557,7 +563,8 @@
                     new_edges.forEach( new_edge => {if (!edges.getIds().includes(new_edge.id)) {edges.add(new_edge)}});
                   }
 
-                  async function check_status(task_id) {
+                  async function check_status(task_id, initial_delay, next_delay) {
+                    await asyncTimeout(initial_delay);
                     const url = `http://localhost:8502/api/tasks/${task_id}/status`;
                     response = await fetch(url, {
                         method: 'GET',
@@ -569,15 +576,22 @@
                       throw new Error(`Response status: ${response.status}`);
                     }
                     const resp_body = await response.json();
+                    // failed: stop
+                    // completed: handle result
+                    // running: handle result and set next
                     if (resp_body.hasOwnProperty('status')) {
-                        if (resp_body.status === 'completed') {
-                            const nodes = resp_body['result'];
+                        if (['failed', 'not_found'].includes(resp_body.status)) {
+                            return;
+                        }
+                        if (['completed', 'running'].includes(resp_body.status)) {
                             handle_task_result(resp_body);
-                            return
                         }
-                        if (resp_body.status !== 'failed') {
-                            setTimeout(check_status, 1000, task_id);
+                        if (resp_body.status === 'completed') {
+                            return;
                         }
+                        check_status(task_id, next_delay, next_delay);
+                    } else {
+                        console.err("No status property in task status check");
                     }
                   };
 
@@ -588,14 +602,14 @@
                       return
                     }
                     const url = `http://localhost:8502/api/expand/${node.id}/${node.selected_types}`
+                    console.log("Expanding from node: ", node.label);
                     fetch(url, {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json'
                         }
                     });
-                    const task_id = 'my_task_id';
-                    setTimeout(check_status, 1000, task_id);
+                    check_status(task_id, 2000, 2000);
                   });
 
                   // Open Spotify item link on alt click
@@ -642,7 +656,7 @@
                           }
                    })[0];
                   const search_task_id = query_node.task_id; // 'search_task';
-                  setTimeout(check_status, 2000, query_node.task_id);
+                  check_status(query_node.task_id, 2000, 2000);
 
                   return network;
 

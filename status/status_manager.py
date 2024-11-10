@@ -40,6 +40,9 @@ class StatusManager(metaclass=ThreadSafeSingleton):
     def run_task(self, task_id: str) -> ValidStatus:
         return self._set_status(task_id=task_id, status=ValidStatus.RUNNING)
 
+    def set_intermediate_result(self, task_id: str, result: Any):
+        self._set_result(task_id=task_id, result=result)
+
     def fail_task(self, task_id: str, error: Optional[Exception] = None):
         self._set_status(task_id=task_id, status=ValidStatus.FAILED, error=error)
 

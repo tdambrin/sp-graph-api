@@ -5,7 +5,7 @@ Task model to automatically set task status and result
 import threading
 from typing import Any, Callable
 
-from tasks.status_manager import StatusManager, ValidStatus
+from status import StatusManager, ValidStatus
 
 
 class Task:

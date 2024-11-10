@@ -35,6 +35,7 @@ class TaskManager:
             keywords=keywords,
             graph_key=graph_key,
             save=save,
+            task_id=task_id,
         )
         task.run()
         graph_ = ItemStore().get_graph(graph_key)
@@ -47,7 +48,11 @@ class TaskManager:
         }
 
     def expand_from_query_node(
-        self, keywords: List[str], graph_key: str, save: bool = False
+        self,
+        keywords: List[str],
+        graph_key: str,
+        save: bool = False,
+        task_id: Optional[str] = None,
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Expand with search from query node
@@ -56,6 +61,7 @@ class TaskManager:
             keywords: list of keywords to search
             graph_key: to add to the graph
             save: whether to save the graph's output as html
+            task_id (str): if provided, set intermediate results to task
         """
         SpotifyWrapper().search(
             keywords=keywords,
@@ -65,6 +71,7 @@ class TaskManager:
             # read_cache=True,
             set_singleton=True,
             write_cache=True,
+            task_id=task_id,
         )
         current_graph = ItemStore().get_graph(graph_key=graph_key)
 

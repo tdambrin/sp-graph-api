@@ -12,9 +12,11 @@ from typing import Any, Callable, Dict, List, Optional, Set
 
 import commons
 import config
+import constants
 import networkx as nx  # type: ignore
 from commons.metaclasses import ThreadSafeSingleton
 from items.item import Album, Artist, Playlist, SpotifyItem, Track, ValidItem
+from status import StatusManager
 
 
 class ItemStore(metaclass=ThreadSafeSingleton):
@@ -165,6 +167,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         item_type: ValidItem,
         depth: int,
         selected_types: List[str],
+        task_id: Optional[str],
     ) -> SpotifyItem:
         """
         Parse item and add it to store
@@ -175,6 +178,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             item_type (one of ValidItem):
             depth (int): depth of node (for styling)
             selected_types (list): item types to add to node
+            task_id (str): if provided, set intermediate results to task
 
         Returns:
             parsed items.SpotifyItem
@@ -188,6 +192,9 @@ class ItemStore(metaclass=ThreadSafeSingleton):
                 depth=depth,
                 selected_types=selected_types,
             )
+        if task_id is not None:
+            self.__add_nodes_edges_to_task(graph_key=graph_key, task_id=task_id)
+
         return self._items[item["id"]]
 
     def parse_items_from_list(
@@ -203,6 +210,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         search_results: Dict[str, Any],
         depth: int,
         selected_types: Optional[List[str]] = None,
+        task_id: Optional[str] = None,
     ) -> List[SpotifyItem]:
         """
         Parse api result with json objects for potentially all items.SpotifyItem subclasses
@@ -211,6 +219,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             search_results (dict): api result with first level keys as spotify items names
             depth (int): for styling when adding to the graph
             selected_types: results obtained from filtering on these types
+            task_id (str): if provided, set intermediate results to task
 
         Returns:
             list of parsed items.SpotifyItem
@@ -247,6 +256,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
                     "graph_key": graph_key,
                     "depth": depth,
                     "selected_types": selected_types,
+                    "task_id": task_id,
                 }
             )
             for item in non_parsed_items
@@ -258,6 +268,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         parent_id: str,
         children_ids: Set[str],
         depth: int,
+        task_id: Optional[str] = None,
     ):
         """
         Add edges between result/query nodes
@@ -267,6 +278,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             parent_id (str): node id of the parent node to relate item with
             children_ids (List[str]): list of node ids relate parent item with
             depth (int): for styling when adding to the graph
+            task_id (str): if provided, set intermediate results to task
         """
         for child_id in children_ids:
             # children first for color
@@ -276,3 +288,29 @@ class ItemStore(metaclass=ThreadSafeSingleton):
                 weight=self._depth_edge_weight(depth),
                 id=f"{parent_id}_{child_id}",
             )
+
+        if task_id is not None:
+            self.__add_nodes_edges_to_task(graph_key=graph_key, task_id=task_id)
+
+    def __add_nodes_edges_to_task(self, graph_key: str, task_id: str):
+        """
+        Add nodes and edges to task result.
+        Used to set intermediate (when task still running) results.
+
+        Args:
+            graph_key (str): id of the graph to relate item in
+            task_id (str): if provided, set intermediate results to task
+        """
+        current_graph = self.get_graph(graph_key=graph_key)
+        nodes_and_edges = {
+            "nodes": commons.nodes_edges_to_list_of_dict(
+                current_graph, constants.NODES  # type: ignore
+            ),
+            "edges": commons.nodes_edges_to_list_of_dict(
+                current_graph, constants.EDGES, system_=constants.VIS_JS_SYS  # type: ignore
+            ),
+        }
+        StatusManager().set_intermediate_result(
+            task_id=task_id,
+            result=nodes_and_edges,
+        )
