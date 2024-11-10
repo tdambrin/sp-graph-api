@@ -1,6 +1,7 @@
 """
 Task model to automatically set task status and result
 """
+
 import threading
 from typing import Any, Callable
 
@@ -12,13 +13,14 @@ class Task:
     To run tasks with targets, automatically sets task status and results.
     Threading mode optional.
     """
+
     def __init__(
-            self,
-            target: Callable,
-            task_uuid: str,
-            use_threading: bool = False,
-            logger: Callable = print,
-            **kwargs
+        self,
+        target: Callable,
+        task_uuid: str,
+        use_threading: bool = False,
+        logger: Callable = print,
+        **kwargs,
     ):
         self.target = target
         self.task_uuid = task_uuid
@@ -51,5 +53,7 @@ class Task:
             raise e.with_traceback(tb)
 
         self.logger(f"Completing task {self.task_uuid}")
-        StatusManager().complete_task(self.task_uuid, status=ValidStatus.COMPLETED, result=task_result)
+        StatusManager().complete_task(
+            self.task_uuid, status=ValidStatus.COMPLETED, result=task_result
+        )
         return task_result

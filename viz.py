@@ -1,15 +1,15 @@
 """
 Visualization only -> build PyVis graph
 """
-from pathlib import Path
-from typing import Any, Dict, List, Union
 
-import networkx as nx
-from jinja2 import Environment, FileSystemLoader
-from pyvis.network import Network
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 import commons
+import networkx as nx  # type: ignore
 from config import OUTPUT_DIR, PROJECT_ROOT
+from jinja2 import Environment, FileSystemLoader
+from pyvis.network import Network  # type: ignore
 
 
 def sample_graph():
@@ -23,14 +23,13 @@ def sample_graph():
 
 
 class GraphVisualizer:
-
     def __init__(
-            self,
-            graph: nx.Graph = None,
-            nodes: List[Dict[str, Any]] = None,
-            edges: List[Dict[str, Any]] = None,
-            bg_color: str = "#ffffff",
-            height: str = "1200px",
+        self,
+        graph: Optional[nx.Graph] = None,
+        nodes: Optional[List[Dict[str, Any]]] = None,
+        edges: Optional[List[Dict[str, Any]]] = None,
+        bg_color: str = "#ffffff",
+        height: str = "1200px",
     ):
         """
 
@@ -46,27 +45,36 @@ class GraphVisualizer:
                 "[viz.GraphVisualizer.__init__] graph and (nodes and/or edges) both provided."
             )
 
-        if graph:
-            self.__graph = graph
-        else:
+        if graph is None:
             assert nodes is not None
-            self.__graph = commons.di_graph_from_list_of_dict(
-                nodes=nodes,
+
+        self.__graph: nx.DiGraph = (
+            graph
+            if graph is not None
+            else commons.di_graph_from_list_of_dict(
+                nodes=nodes,  # type: ignore
                 edges=edges,
             )
+        )
 
-        self.__network = Network(bgcolor=bg_color, height=height, width="100%",)
+        self.__network = Network(
+            bgcolor=bg_color,
+            height=height,
+            width="100%",
+        )
         self.__network.from_nx(self.__graph)
 
         # set physics options
         self.__network.force_atlas_2based()
 
         # set interaction options
-        self.__network.options.interaction.zoomSpeed = .5
+        self.__network.options.interaction.zoomSpeed = 0.5
         self.__network.options.interaction.hover = True
 
         # temp fix until pyvis href support
-        self.__network.templateEnv = Environment(loader=FileSystemLoader(PROJECT_ROOT / "templates"))
+        self.__network.templateEnv = Environment(
+            loader=FileSystemLoader(PROJECT_ROOT / "templates")
+        )
 
     def save(self, path: Union[str, Path] = OUTPUT_DIR / "tmp.html"):
         self.__network.show(path, notebook=False)

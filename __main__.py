@@ -1,14 +1,25 @@
-from api_clients.wrappers import SpotifyWrapper
+import items
 from config import OUTPUT_DIR
-from items import ItemStore
+from tasks import TaskManager
 from viz import GraphVisualizer
 
-spotify = SpotifyWrapper()
-graph_key = spotify.search(["khruangbin"],  max_depth=2)
-# graph_key = spotify.search(["khruangbin"], initial_types=["album"], restricted_types=["album"],  max_depth=2)
+selected_types = [
+    items.ValidItem.TRACK.value,
+    items.ValidItem.ALBUM.value,
+    items.ValidItem.ARTIST.value,
+]
+keywords = input("Search what (space separated)")
+keywords_ = keywords.split(" ")
 
-graph = ItemStore().get_graph(graph_key)
+ctrl = TaskManager(selected_types=selected_types)
+result = ctrl.search_task(keywords=keywords_, save=True)
+filename = OUTPUT_DIR / ("_".join(["main_result", *keywords, "0", "4"]) + ".html")
+with open(
+    filename,
+    "w",
+) as f:
+    f.write(
+        GraphVisualizer(nodes=result.get("nodes"), edges=result.get("edges")).html_str()
+    )
 
-# filename = input("Enter file name for graph html:")
-GraphVisualizer(graph).save(OUTPUT_DIR / "khruangbin_v2.html")
-print(graph.nodes)
+print(f"Saved search graph to {filename}")

@@ -1,12 +1,12 @@
 <html>
     <head>
         <meta charset="utf-8">
-        
+
             <script src="lib/bindings/utils.js"></script>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
             <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-            
-        
+
+
 <center>
 <h1></h1>
 </center>
@@ -39,24 +39,24 @@
                  float: left;
              }
 
-             
 
-             
 
-             
+
+
+
         </style>
     </head>
 
 
     <body>
         <div class="card" style="width: 100%; border: none;">
-            
-            
+
+
             <div id="mynetwork" class="card-body" style="font-weight: bold;"></div>
         </div>
 
-        
-        
+
+
 
         <script type="text/javascript">
 
@@ -76,15 +76,15 @@
                   value : []
               };
 
-              
 
-              
+
+
 
               // This method is responsible for drawing the graph, returns the drawn network
               function drawGraph() {
                   var container = document.getElementById('mynetwork');
 
-                  
+
 
 
                   // parsing and collecting nodes and edges from the python
@@ -141,21 +141,21 @@
     }
 };
 
-                  
 
 
-                  
+
+
 
                   network = new vis.Network(container, data, options);
 
-                  
-
-                  
-
-                  
 
 
-                  
+
+
+
+
+
+
 
                   // ---- Interactive functions --------
 

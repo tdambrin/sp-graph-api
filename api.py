@@ -1,9 +1,10 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from typing import List
 
 import commons
 import config
 from commons import str_to_values
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from tasks import StatusManager, TaskManager
 
 spg_api = FastAPI()
@@ -25,12 +26,12 @@ spg_api.add_middleware(
 @spg_api.get("/api/search/{keywords}/{selected_types}")
 def search(keywords: str, selected_types: str):
     # Parse params
-    keywords = commons.str_to_values(keywords, sep="+")
-    selected_types = commons.str_to_values(selected_types, sep="+")
+    keywords_: List[str] = commons.str_to_values(keywords, sep="+")
+    selected_types_: List[str] = commons.str_to_values(selected_types, sep="+")
 
     # Start search
-    ctrl = TaskManager(selected_types=selected_types)
-    return ctrl.search_task(keywords=keywords, save=True)
+    ctrl = TaskManager(selected_types=selected_types_)
+    return ctrl.search_task(keywords=keywords_, save=True)
 
 
 @spg_api.get("/api/expand/{node_id}/{selected_types}")

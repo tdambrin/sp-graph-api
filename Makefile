@@ -16,6 +16,9 @@ isort:
 black:
 	$(PYTHON) -m black --check .
 
+mypy-install:
+	$(PYTHON) -m mypy --install-types
+
 mypy:
 	$(PYTHON) -m mypy .
 
@@ -29,8 +32,13 @@ lint: isort black mypy flake8 bandit
 
 install: install-deps
 
-dev-install:  update-dev-deps
+enable-pre-commit:
+	pre-commit install
+
+dev-install-deps:
 	$(PYTHON) -m pip install -r requirements.dev.txt
+
+dev-install: dev-install-deps update-dev-deps mypy-install enable-pre-commit
 
 api:
 	uvicorn api:spg_api --host 127.0.0.1 --port 8502

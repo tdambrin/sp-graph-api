@@ -1,24 +1,32 @@
 """
 Task Manager to instantiate and handle tasks
 """
+
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import commons
 import constants
 from api_clients.wrappers import SpotifyWrapper
 from config import OUTPUT_DIR
+from items.item import ValidItem
 from items.store import ItemStore
 from tasks.task import Task
 from viz import GraphVisualizer
 
 
 class TaskManager:
-    def __init__(self, selected_types: List[str] = None):
-        self._selected_types = selected_types
+    ALL_TYPES = [
+        ValidItem.ALBUM.value,
+        ValidItem.ARTIST.value,
+        ValidItem.TRACK.value,
+    ]
+
+    def __init__(self, selected_types: Optional[List[str]] = None):
+        self._selected_types: List[str] = selected_types or TaskManager.ALL_TYPES
 
     def search_task(self, keywords: List[str], save: bool = False):
-        task_id = "search_task"  # str(uuid.uuid4())
+        task_id = str(uuid.uuid4())
         graph_key = self._init_query_graph(keywords=keywords, task_id=task_id)
         task = Task(
             target=self.expand_from_query_node,
@@ -33,14 +41,13 @@ class TaskManager:
         return {
             "task_id": task_id,
             "nodes": commons.nodes_edges_to_list_of_dict(graph_, which=constants.NODES),
-            "edges": commons.nodes_edges_to_list_of_dict(graph_, which=constants.EDGES, system_=constants.VIS_JS_SYS),
+            "edges": commons.nodes_edges_to_list_of_dict(
+                graph_, which=constants.EDGES, system_=constants.VIS_JS_SYS
+            ),
         }
 
     def expand_from_query_node(
-        self,
-        keywords: List[str],
-        graph_key: str,
-        save: bool = False
+        self, keywords: List[str], graph_key: str, save: bool = False
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Expand with search from query node
@@ -62,19 +69,23 @@ class TaskManager:
         current_graph = ItemStore().get_graph(graph_key=graph_key)
 
         if save:
-            with open(OUTPUT_DIR / ("_".join([graph_key, "0", "4"]) + ".html"), "w") as f:
+            with open(
+                OUTPUT_DIR / ("_".join([graph_key, "0", "4"]) + ".html"), "w"
+            ) as f:
                 f.write(GraphVisualizer(graph=current_graph).html_str())
 
         res = {
-            "nodes": commons.nodes_edges_to_list_of_dict(current_graph, constants.NODES),
-            "edges": commons.nodes_edges_to_list_of_dict(current_graph, constants.EDGES, system_=constants.VIS_JS_SYS),
+            "nodes": commons.nodes_edges_to_list_of_dict(
+                current_graph, constants.NODES
+            ),
+            "edges": commons.nodes_edges_to_list_of_dict(
+                current_graph, constants.EDGES, system_=constants.VIS_JS_SYS
+            ),
         }
         return res
 
     @staticmethod
-    def _init_query_graph(
-        keywords: List[str], task_id: str
-    ) -> str:
+    def _init_query_graph(keywords: List[str], task_id: str) -> str:
         """
         Initialize query graph with a query node
 
@@ -98,7 +109,7 @@ class TaskManager:
         Returns:
             task id
         """
-        task_id = "my_task_id"  # str(uuid.uuid4())
+        task_id = str(uuid.uuid4())
         task = Task(
             target=self.expand_from_node,
             task_uuid=task_id,
@@ -109,7 +120,9 @@ class TaskManager:
         task.run()
         return task_id
 
-    def expand_from_node(self, node_id: str, save: bool = False) -> Dict[str, List[Dict[str, Any]]]:
+    def expand_from_node(
+        self, node_id: str, save: bool = False
+    ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Expand the graph from one node
         Args:
@@ -140,10 +153,17 @@ class TaskManager:
         current_graph = ItemStore().get_graph(graph_key=current_graph_key)
 
         if save:
-            with open(OUTPUT_DIR / ("_".join([current_graph_key, "0", "4"]) + ".html"), "w") as f:
+            with open(
+                OUTPUT_DIR / ("_".join([current_graph_key, "0", "4"]) + ".html"),
+                "w",
+            ) as f:
                 f.write(GraphVisualizer(graph=current_graph).html_str())
 
         return {
-            "nodes": commons.nodes_edges_to_list_of_dict(current_graph, constants.NODES),
-            "edges": commons.nodes_edges_to_list_of_dict(current_graph, constants.EDGES),
+            "nodes": commons.nodes_edges_to_list_of_dict(
+                current_graph, constants.NODES
+            ),
+            "edges": commons.nodes_edges_to_list_of_dict(
+                current_graph, constants.EDGES
+            ),
         }

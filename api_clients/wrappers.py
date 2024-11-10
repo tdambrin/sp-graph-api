@@ -1,7 +1,7 @@
 import functools
 import json
 import operator
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import items
 from commons import utils
@@ -19,16 +19,20 @@ class SpotifyWrapper:
     @property
     def all_types(self):
         return [
-            items.ValidItem.ALBUM.value, items.ValidItem.ARTIST.value, items.ValidItem.TRACK.value,
+            items.ValidItem.ALBUM.value,
+            items.ValidItem.ARTIST.value,
+            items.ValidItem.TRACK.value,
             # items.ValidItem.PLAYLIST.value,
             # items.ValidItem.SHOW.value, items.ValidItem.EPISODE.value, items.ValidItem.AUDIOBOOK.value,
         ]
 
     @property
     def type_rec_weight(self):
-        """ Recommendation weight for each type when several possible """
+        """Recommendation weight for each type when several possible"""
         return {
-            items.ValidItem.ALBUM.value: 1, items.ValidItem.ARTIST.value: 1, items.ValidItem.TRACK.value: 3,
+            items.ValidItem.ALBUM.value: 1,
+            items.ValidItem.ARTIST.value: 1,
+            items.ValidItem.TRACK.value: 3,
             # items.ValidItem.PLAYLIST.value: 0,
             # items.ValidItem.SHOW.value: 0, items.ValidItem.EPISODE.value: 0, items.ValidItem.AUDIOBOOK.value: 0,
         }
@@ -36,19 +40,21 @@ class SpotifyWrapper:
     @staticmethod
     def cache(name, obj):
         from config import PROJECT_ROOT
+
         with open(PROJECT_ROOT / "responses" / name, "w") as f:
             json.dump(obj, f)
 
     @staticmethod
     def read_cache(name):
         from config import PROJECT_ROOT
+
         return json.load(open(PROJECT_ROOT / "responses" / name, "r"))
 
     def search(
         self,
         keywords: List[str],
         graph_key: str,
-        restricted_types: List[str] = None,
+        restricted_types: Optional[List[str]] = None,
         max_depth: int = 2,
         **kwargs,
     ) -> str:
@@ -79,7 +85,9 @@ class SpotifyWrapper:
         )
 
         if kwargs.get("read_cache"):
-            search_results = SpotifyWrapper.read_cache(f"search_{graph_key.lower()}.json")
+            search_results = SpotifyWrapper.read_cache(
+                f"search_{graph_key.lower()}.json"
+            )
         else:
             search_results = self.__client.search(**query_params)
 
@@ -88,7 +96,10 @@ class SpotifyWrapper:
 
         # Parse and set results to store
         parsed_items = ItemStore().parse_items_from_api_result(
-            graph_key=graph_key, search_results=search_results, depth=1, selected_types=restricted_types,
+            graph_key=graph_key,
+            search_results=search_results,
+            depth=1,
+            selected_types=restricted_types,
         )
         ItemStore().relate(
             graph_key=graph_key,
@@ -108,7 +119,7 @@ class SpotifyWrapper:
                 depth=2,
                 max_depth=max_depth,
                 restricted_types=restricted_types,
-                **kwargs
+                **kwargs,
             )
         return graph_key
 
@@ -119,7 +130,7 @@ class SpotifyWrapper:
         depth: int,
         max_depth: int,
         restricted_types: List[str],
-        **kwargs
+        **kwargs,
     ):
         """
         Find nodes related to a starting node
@@ -137,25 +148,34 @@ class SpotifyWrapper:
         if depth > max_depth:
             return
 
-        relative_rec_weights = [self.type_rec_weight[_type] for _type in restricted_types]
+        relative_rec_weights = [
+            self.type_rec_weight[_type] for _type in restricted_types
+        ]
         scaled_rec_weights = {
             _type: scaled_weight
             for _type, scaled_weight in zip(
                 restricted_types,
-                utils.scale_weights(relative_rec_weights, SpotifyWrapper.REC_SIZE)
+                utils.scale_weights(relative_rec_weights, SpotifyWrapper.REC_SIZE),
             )
         }
 
         if kwargs.get("read_cache"):
-            recommendation_results = SpotifyWrapper.read_cache(f"recommend_{item.id}.json")
+            recommendation_results = SpotifyWrapper.read_cache(
+                f"recommend_{item.id}.json"
+            )
         else:
-            recommendation_results = self.recommend_from_item(item=item, limit_per_type=scaled_rec_weights)
+            recommendation_results = self.recommend_from_item(
+                item=item, limit_per_type=scaled_rec_weights
+            )
 
         if kwargs.get("write_cache"):
             SpotifyWrapper.cache(f"recommend_{item.id}.json", recommendation_results)
 
         parsed_items = ItemStore().parse_items_from_api_result(
-            graph_key=graph_key, search_results=recommendation_results, depth=depth, selected_types=restricted_types,
+            graph_key=graph_key,
+            search_results=recommendation_results,
+            depth=depth,
+            selected_types=restricted_types,
         )
         ItemStore().relate(
             graph_key=graph_key,
@@ -168,16 +188,16 @@ class SpotifyWrapper:
             self.find_related(
                 graph_key=graph_key,
                 item=item,
-                depth=depth+1,
+                depth=depth + 1,
                 max_depth=max_depth,
                 restricted_types=restricted_types,
             )
 
     def recommend_from_item(
-            self,
-            item: items.SpotifyItem,
-            limit_per_type: Dict[str, int],
-            **kwargs,
+        self,
+        item: items.SpotifyItem,
+        limit_per_type: Dict[str, int],
+        **kwargs,
     ):
         """
         Get recommendation results from item. Add items to items.ItemStore
@@ -185,19 +205,22 @@ class SpotifyWrapper:
             item: parsed starting item
             limit_per_type: max results per items type
         """
-        all_results = {}
+        all_results: Dict[str, Any] = {}
         if limit := limit_per_type.get(items.ValidItem.TRACK.value):
-            all_results = utils.dict_extend(all_results, self._recommend_track(
-                **item.recommendation_query,
-                limit=limit,
-                **kwargs,
-            ))
+            all_results = utils.dict_extend(
+                all_results,
+                self._recommend_track(
+                    **item.recommendation_query,
+                    limit=limit,
+                    **kwargs,
+                ),
+            )
         if limit := limit_per_type.get(items.ValidItem.ALBUM.value):
             # get artists
             if item.type == items.ValidItem.ARTIST:
                 artist_ids = [item.id]
             elif item.type in (items.ValidItem.ALBUM, items.ValidItem.TRACK):
-                artist_ids = [a.id for a in item.artists]
+                artist_ids = [a.id for a in item.artists]  # type: ignore
             else:
                 raise NotImplementedError(
                     "[Error: SpotifyWrapper.recommend_from_item] "
@@ -206,13 +229,15 @@ class SpotifyWrapper:
             # get artists albums
             all_results = utils.dict_extend(
                 all_results,
-                self._artists_albums(artists_ids=tuple(artist_ids), limit=limit, **kwargs)
+                self._artists_albums(
+                    artists_ids=tuple(artist_ids), limit=limit, **kwargs
+                ),
             )
         if limit := limit_per_type.get(items.ValidItem.ARTIST.value):
             if item.type == items.ValidItem.ARTIST:
                 artist_ids = [item.id]
             elif item.type in (items.ValidItem.ALBUM, items.ValidItem.TRACK):
-                artist_ids = [a.id for a in item.artists]
+                artist_ids = [a.id for a in item.artists]  # type: ignore
             else:
                 raise NotImplementedError(
                     "[Error: SpotifyWrapper.recommend_from_item] "
@@ -220,25 +245,36 @@ class SpotifyWrapper:
                 )
             all_results = utils.dict_extend(
                 all_results,
-                self._related_artists(artists_ids=tuple(artist_ids), limit=limit)
+                self._related_artists(artists_ids=tuple(artist_ids), limit=limit),
             )
         return all_results
 
     @functools.cache
-    def _related_artists(self, artists_ids: Tuple[str], limit: int = 5, **kwargs) -> Dict[str, Any]:
-        all_related = functools.reduce(operator.add, [
-            self.__client.artist_related_artists(
-                artist_id=artists_id,
-                **kwargs
-            )['artists'] for artists_id in artists_ids
-        ])
+    def _related_artists(
+        self, artists_ids: Tuple[str], limit: int = 5, **kwargs
+    ) -> Dict[str, Any]:
+        all_related = functools.reduce(
+            operator.add,
+            [
+                self.__client.artist_related_artists(artist_id=artists_id, **kwargs)[
+                    "artists"
+                ]
+                for artists_id in artists_ids
+            ],
+        )
         return {
-            "artists": list({a['id']: a for a in all_related}.values())[:limit]  # removed duplicates
+            "artists": list({a["id"]: a for a in all_related}.values())[
+                :limit
+            ]  # removed duplicates
         }
 
     @functools.cache
-    def _artists_albums(self, artists_ids: Tuple[str], limit: int = 5, **kwargs) -> Dict[str, Any]:
-        limit_per_artist = utils.scale_weights([1]*min(len(artists_ids), limit), limit)
+    def _artists_albums(
+        self, artists_ids: Tuple[str], limit: int = 5, **kwargs
+    ) -> Dict[str, Any]:
+        limit_per_artist = utils.scale_weights(
+            [1] * min(len(artists_ids), limit), limit
+        )
         limit_per_artist = {
             artist_id: limit_for_artist
             for artist_id, limit_for_artist in zip(
@@ -246,32 +282,37 @@ class SpotifyWrapper:
                 limit_per_artist,
             )
         }
-        all_albums = functools.reduce(operator.add, [
-            self.__client.artist_albums(
-                artist_id=artists_id,
-                include_groups="album",
-                limit=limit_for_artist,
-                **kwargs
-            )['items']
-            for artists_id, limit_for_artist in limit_per_artist.items()
-        ])
+        all_albums = functools.reduce(
+            operator.add,
+            [
+                self.__client.artist_albums(
+                    artist_id=artists_id,
+                    include_groups="album",
+                    limit=limit_for_artist,
+                    **kwargs,
+                )["items"]
+                for artists_id, limit_for_artist in limit_per_artist.items()
+            ],
+        )
         return {
-            "albums": list({a['id']: a for a in all_albums}.values())  # removed duplicates
+            "albums": list(
+                {a["id"]: a for a in all_albums}.values()
+            )  # removed duplicates
         }
 
     @functools.cache
     def _recommend_track(
-            self,
-            seed_artists: Tuple[items.Artist] = None,
-            seed_genres: Tuple[str] = None,
-            seed_tracks: Tuple[items.Track] = None,
-            limit: int = 5,
-            **kwargs,
+        self,
+        seed_artists: Optional[Tuple[items.Artist]] = None,
+        seed_genres: Optional[Tuple[str]] = None,
+        seed_tracks: Optional[Tuple[items.Track]] = None,
+        limit: int = 5,
+        **kwargs,
     ) -> Dict[str, Any]:
         return self.__client.recommendations(
-            seed_artists=[a.id for a in seed_artists][:5] if seed_artists else None,
+            seed_artists=([a.id for a in seed_artists][:5] if seed_artists else None),
             seed_genres=seed_genres[:5] if seed_genres else None,
-            seed_tracks=[t.id for t in seed_tracks][:5] if seed_tracks else None,
+            seed_tracks=([t.id for t in seed_tracks][:5] if seed_tracks else None),
             limit=limit,
             **kwargs,
         )
@@ -279,7 +320,7 @@ class SpotifyWrapper:
     @staticmethod
     def __build_search_query(
         keywords: List[str],
-        restricted_types: List[str] = None,
+        restricted_types: Optional[List[str]] = None,
         limit: int = 5,
     ) -> Dict[str, Any]:
         params = {
@@ -291,4 +332,4 @@ class SpotifyWrapper:
         return params
 
     def search_exemple(self):
-        return self.__client.search(q='khruangbin', limit=20)
+        return self.__client.search(q="khruangbin", limit=20)

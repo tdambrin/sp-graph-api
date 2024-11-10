@@ -1,12 +1,12 @@
 <html>
     <head>
         <meta charset="utf-8">
-        
+
             <script src="lib/bindings/utils.js"></script>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
             <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-            
-        
+
+
 <center>
 <h1></h1>
 </center>
@@ -40,24 +40,24 @@
                  float: left;
              }
 
-             
 
-             
 
-             
+
+
+
         </style>
     </head>
 
 
     <body>
         <div class="card" style="width: 100%">
-            
-            
+
+
             <div id="mynetwork" class="card-body"></div>
         </div>
 
-        
-        
+
+
 
         <script type="text/javascript">
 
@@ -77,15 +77,15 @@
                   value : []
               };
 
-              
 
-              
+
+
 
               // This method is responsible for drawing the graph, returns the drawn network
               function drawGraph() {
                   var container = document.getElementById('mynetwork');
 
-                  
+
 
                   // parsing and collecting nodes and edges from the python
                   nodes = new vis.DataSet([{"color": "#97c2fc", "id": "khruangbin", "label": "khruangbin", "shape": "dot", "size": 0}, {"color": "#97c2fc", "id": "Live at Sydney Opera House", "label": "Live at Sydney Opera House", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Leon Bridges", "label": "Leon Bridges", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mariella", "label": "Mariella", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Maria Tambi\u00e9n", "label": "Maria Tambi\u00e9n", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Time (You and I)", "label": "Time (You and I)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mordechai", "label": "Mordechai", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "A LA SALA", "label": "A LA SALA", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Anderson .Paak", "label": "Anderson .Paak", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Men I Trust", "label": "Men I Trust", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Con Todo El Mundo", "label": "Con Todo El Mundo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Crumb", "label": "Crumb", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Khruangbin", "label": "Khruangbin", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "People Everywhere (Still Alive)", "label": "People Everywhere (Still Alive)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Texas Sun", "label": "Texas Sun", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Pretty Boys (feat. Khruangbin)", "label": "Pretty Boys (feat. Khruangbin)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mesa Redonda", "label": "Mesa Redonda", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Midnight Mischief (Tom Misch Remix)", "label": "Midnight Mischief (Tom Misch Remix)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Broom", "label": "Broom", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vanille fraise", "label": "Vanille fraise", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "All Night", "label": "All Night", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Cheer Up, My Brother", "label": "Cheer Up, My Brother", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Under The Magnolia Tree", "label": "Under The Magnolia Tree", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Suddenly", "label": "Suddenly", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Golden Light", "label": "Golden Light", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Problemz", "label": "Problemz", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Swim and Sleep (Like a Shark)", "label": "Swim and Sleep (Like a Shark)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Windows", "label": "Windows", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "All The Time", "label": "All The Time", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Doris", "label": "Doris", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Changes", "label": "Changes", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "If I Got It (Your Love Brought It)", "label": "If I Got It (Your Love Brought It)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "The Infamous Bill", "label": "The Infamous Bill", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Thinking \u0027Bout Love", "label": "Thinking \u0027Bout Love", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Dark Days", "label": "Dark Days", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Hold Me Up (Thank You)", "label": "Hold Me Up (Thank You)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Games", "label": "Games", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Tezeta", "label": "Tezeta", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Don\u0027t Waste My Time", "label": "Don\u0027t Waste My Time", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Joe Frazier", "label": "Joe Frazier", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Stepping Through Shadow", "label": "Stepping Through Shadow", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Drinking from the Cup of Bob Knob", "label": "Drinking from the Cup of Bob Knob", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "F\u00fcr Hildegard von Bingen", "label": "F\u00fcr Hildegard von Bingen", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Dern Kala", "label": "Dern Kala", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "I Root", "label": "I Root", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Darling", "label": "Darling", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "C-Side", "label": "C-Side", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Got Caught in Amsterdam", "label": "Got Caught in Amsterdam", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Beginner\u0027s Luck", "label": "Beginner\u0027s Luck", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Tearz", "label": "Tearz", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "I Stay in Bed These Days Too Much", "label": "I Stay in Bed These Days Too Much", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Retreat!", "label": "Retreat!", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Always Tomorrow", "label": "Always Tomorrow", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ivy", "label": "Ivy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Better Together", "label": "Better Together", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Rearrange Us", "label": "Rearrange Us", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Comedown", "label": "Comedown", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Almost (Sweet Music)", "label": "Almost (Sweet Music)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Lost In The Light", "label": "Lost In The Light", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Butterflies", "label": "Butterflies", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Not For Nothing (feat. Anderson .Paak)", "label": "Not For Nothing (feat. Anderson .Paak)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Uno Dos", "label": "Uno Dos", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Suit \u0026 Tie (feat. Jay-Z)", "label": "Suit \u0026 Tie (feat. Jay-Z)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "GRAVITY (FEAT. TYLER, THE CREATOR)", "label": "GRAVITY (FEAT. TYLER, THE CREATOR)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Falling in Loves too Mean", "label": "Falling in Loves too Mean", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Dust Bunny", "label": "Dust Bunny", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Who Am I But Someone", "label": "Who Am I But Someone", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Wish", "label": "Wish", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Shiggy", "label": "Shiggy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Something New", "label": "Something New", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ala Vida", "label": "Ala Vida", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Charlotte\u0027s Thong", "label": "Charlotte\u0027s Thong", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "\u30ca\u30f3\u30cf\u3099\u30fc4", "label": "\u30ca\u30f3\u30cf\u3099\u30fc4", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Every Day a Dream", "label": "Every Day a Dream", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "So Good at Being in Trouble", "label": "So Good at Being in Trouble", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Blue Coloured Mountain", "label": "Blue Coloured Mountain", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vapour", "label": "Vapour", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "C\u00f3mo Me Quieres", "label": "C\u00f3mo Me Quieres", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Constant Surprises", "label": "Constant Surprises", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Witchoo", "label": "Witchoo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "I Am The Changer", "label": "I Am The Changer", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Better Than", "label": "Better Than", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Lone Ranger", "label": "Lone Ranger", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Cola", "label": "Cola", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "The Man Who Took My Sunglasses", "label": "The Man Who Took My Sunglasses", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Bean", "label": "Bean", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "My God Has A Telephone", "label": "My God Has A Telephone", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Give a Little Love", "label": "Give a Little Love", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Up From the South", "label": "Up From the South", "shape": "dot", "size": 10}]);
@@ -130,21 +130,21 @@
     }
 };
 
-                  
 
 
-                  
+
+
 
                   network = new vis.Network(container, data, options);
 
-                  
-
-                  
-
-                  
 
 
-                  
+
+
+
+
+
+
 
                   return network;
 

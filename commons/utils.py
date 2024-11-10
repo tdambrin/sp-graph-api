@@ -1,17 +1,14 @@
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
-import networkx as nx
+import constants
+import networkx as nx  # type: ignore
 import numpy as np
 import yaml
 
-import constants
 
-
-def load_from_yml(
-    path: Union[str, Path]
-) -> Dict[str, Any]:
+def load_from_yml(path: Union[str, Path]) -> Dict[str, Any]:
     with open(path, "r") as f:
         content = yaml.safe_load(f)
     return content
@@ -27,11 +24,11 @@ def str_to_values(values: str, sep: str = ",") -> List[str]:
     return [value.strip() for value in values.split(sep)]
 
 
-def dict_extend(*args):
+def dict_extend(*args) -> Dict[Any, Any]:
     """
     same as {**d1, **d2} but add overlapping values instead of overriding
     """
-    d = {}
+    d: Dict[Any, Any] = {}
     for entry in args:
         for key in entry:
             if d.get(key):
@@ -67,7 +64,9 @@ def scale_weights(
         )
     n = len(relative_weights)
     res = [1] * n if include_all else [0] * n
-    remaining = [w-1 for w in relative_weights] if include_all else relative_weights.copy()
+    remaining = (
+        [w - 1 for w in relative_weights] if include_all else relative_weights.copy()
+    )
     used = n if include_all else 0
     _next = np.argmax(remaining)
     while used < target_sum and remaining[_next] > 0:
@@ -81,7 +80,7 @@ def scale_weights(
             sum(weights)
             for weights in zip(
                 res,
-                scale_weights(relative_weights, target_sum - used, include_all=False)
+                scale_weights(relative_weights, target_sum - used, include_all=False),
             )
         ]
 
@@ -109,18 +108,20 @@ def nodes_edges_to_list_of_dict(
 
     if which == constants.NODES:
         nodes_ = g.nodes(data=True)
-        return [{'id': i_id, **i_props} for i_id, i_props in nodes_]
+        return [{"id": i_id, **i_props} for i_id, i_props in nodes_]
 
     assert system_ in (constants.VIS_JS_SYS, constants.PYTHON_SYS)
     from_key_name = "u_of_edge" if system_ == constants.PYTHON_SYS else "from"
     to_key_name = "v_of_edge" if system_ == constants.PYTHON_SYS else "to"
     edges_ = g.edges(data=True)
-    return [{from_key_name: source_id, to_key_name: to_id, **i_props} for source_id, to_id, i_props in edges_]
+    return [
+        {from_key_name: source_id, to_key_name: to_id, **i_props}
+        for source_id, to_id, i_props in edges_
+    ]
 
 
 def di_graph_from_list_of_dict(
-    nodes: List[Dict[str, Any]],
-    edges: List[Dict[str, Any]] = None
+    nodes: List[Dict[str, Any]], edges: Optional[List[Dict[str, Any]]] = None
 ) -> nx.DiGraph:
     """
     Create a nx.DiGraph from nodes and edges as list of props with their ids
@@ -135,12 +136,10 @@ def di_graph_from_list_of_dict(
     for node in nodes:
         g_.add_node(
             node_for_adding=node["id"],
-            **{key: value for key, value in node.items() if key != "id"}
+            **{key: value for key, value in node.items() if key != "id"},
         )
     if edges is None:
         return g_
     for edge in edges:
-        g_.add_edge(
-            **edge
-        )
+        g_.add_edge(**edge)
     return g_

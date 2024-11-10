@@ -7,7 +7,6 @@ Contains:
     - one class for each spotify item type
 """
 
-
 import functools
 from abc import abstractmethod
 from enum import Enum
@@ -15,10 +14,9 @@ from functools import cached_property
 from operator import add
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
-
 from api_clients import spotify_client
 from config import NodeColor
+from pydantic import BaseModel
 
 
 class ValidItem(Enum):
@@ -113,10 +111,7 @@ class Album(SpotifyItem):
 
     @property
     def title(self) -> str:
-        return (
-            f"Album - {self.name}\n"
-            f"released on {self.release_date}"
-        )
+        return f"Album - {self.name}\n" f"released on {self.release_date}"
 
 
 class Playlist(SpotifyItem):
@@ -133,7 +128,10 @@ class Playlist(SpotifyItem):
         #     json.dump(api_result, f)
         if not api_result:
             return []
-        artists = [Artist(**artist_info) for artist_info in api_result.get('track', {}).get("artists", [])]
+        artists = [
+            Artist(**artist_info)
+            for artist_info in api_result.get("track", {}).get("artists", [])
+        ]
         return functools.reduce(add, [a.genres for a in artists], [])
 
     @property
@@ -161,7 +159,9 @@ class Track(SpotifyItem):
         # album_rec_query = self.album.recommendation_query() if self.album else {}
         # artist_rec_queries = dict_extend(*[a.recommendation_query() for a in self.artists])
         seed_tracks = {"seed_tracks": tuple([self])}
-        return seed_tracks  # dict_extend(album_rec_query, artist_rec_queries, seed_tracks)
+        return (
+            seed_tracks  # dict_extend(album_rec_query, artist_rec_queries, seed_tracks)
+        )
 
     @property
     def node_color(self) -> str:
@@ -169,7 +169,4 @@ class Track(SpotifyItem):
 
     @property
     def title(self) -> str:
-        return (
-            f"Track - {self.name}\n"
-            f"by {','.join([a.name for a in self.artists])}"
-        )
+        return f"Track - {self.name}\n" f"by {','.join([a.name for a in self.artists])}"

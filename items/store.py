@@ -10,10 +10,9 @@ from functools import reduce
 from operator import add
 from typing import Any, Callable, Dict, List, Optional, Set
 
-import networkx as nx
-
 import commons
 import config
+import networkx as nx  # type: ignore
 from commons.metaclasses import ThreadSafeSingleton
 from items.item import Album, Artist, Playlist, SpotifyItem, Track, ValidItem
 
@@ -30,7 +29,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             ValidItem.ALBUM: Album,
             ValidItem.ARTIST: Artist,
             ValidItem.PLAYLIST: Playlist,
-            ValidItem.TRACK: Track
+            ValidItem.TRACK: Track,
         }
 
     @property
@@ -81,7 +80,13 @@ class ItemStore(metaclass=ThreadSafeSingleton):
     def _set_current_graph_key(self, key: str):
         self._current_graph_key = key
 
-    def _add_node(self, graph_key: str, item: SpotifyItem, selected_types: List[str], depth: int = 3):
+    def _add_node(
+        self,
+        graph_key: str,
+        item: SpotifyItem,
+        selected_types: List[str],
+        depth: int = 3,
+    ):
         """
         Add node to the graph
 
@@ -154,7 +159,12 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         return self._items_parser[item_type](**item)
 
     def __parse_item_with_type(
-            self, graph_key: str, item: Dict[str, Any], item_type: ValidItem, depth: int, selected_types: List[str],
+        self,
+        graph_key: str,
+        item: Dict[str, Any],
+        item_type: ValidItem,
+        depth: int,
+        selected_types: List[str],
     ) -> SpotifyItem:
         """
         Parse item and add it to store
@@ -173,16 +183,26 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             self._items[item["id"]] = self.__parse_item(item=item, item_type=item_type)
         if not self._graphs[graph_key].nodes.get(item["id"]):
             self._add_node(
-                graph_key=graph_key, item=self._items[item["id"]], depth=depth, selected_types=selected_types
+                graph_key=graph_key,
+                item=self._items[item["id"]],
+                depth=depth,
+                selected_types=selected_types,
             )
         return self._items[item["id"]]
 
-    def parse_items_from_list(self, dict_items: List[Dict[str, Any]], item_type: ValidItem) -> List[SpotifyItem]:
-        return [self.__parse_item(item=item, item_type=item_type) for item in dict_items]
+    def parse_items_from_list(
+        self, dict_items: List[Dict[str, Any]], item_type: ValidItem
+    ) -> List[SpotifyItem]:
+        return [
+            self.__parse_item(item=item, item_type=item_type) for item in dict_items
+        ]
 
     def parse_items_from_api_result(
-            self, graph_key: str, search_results: Dict[str, Any], depth: int,
-            selected_types: List[str] = None,
+        self,
+        graph_key: str,
+        search_results: Dict[str, Any],
+        depth: int,
+        selected_types: Optional[List[str]] = None,
     ) -> List[SpotifyItem]:
         """
         Parse api result with json objects for potentially all items.SpotifyItem subclasses
@@ -195,30 +215,50 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         Returns:
             list of parsed items.SpotifyItem
         """
-        selected_types = selected_types or [ValidItem.ALBUM.value, ValidItem.ARTIST.value, ValidItem.TRACK.value]
+        selected_types = selected_types or [
+            ValidItem.ALBUM.value,
+            ValidItem.ARTIST.value,
+            ValidItem.TRACK.value,
+        ]
 
-        def _items_or_empty(entry: Optional[Dict[str, Any]], entry_type: ValidItem) -> List[Dict[str, Any]]:
+        def _items_or_empty(
+            entry: Optional[Dict[str, Any]], entry_type: ValidItem
+        ) -> List[Dict[str, Any]]:
             if (not entry) or (isinstance(entry, dict) and not entry.get("items")):
                 return []
-            return [{"item": item, "item_type": entry_type}
-                    for item in (entry if isinstance(entry, list) else entry["items"])]
+            return [
+                {"item": item, "item_type": entry_type}
+                for item in (entry if isinstance(entry, list) else entry["items"])
+            ]
 
         non_parsed_items = reduce(
             add,
-            map(_items_or_empty,
+            map(
+                _items_or_empty,
                 map(search_results.get, self._items_api_keys.values()),
-                self._items_api_keys.keys()
-                )
+                self._items_api_keys.keys(),
+            ),
         )
 
         return [
-            self.__parse_item_with_type(**{
-                **item, "graph_key": graph_key, "depth": depth, "selected_types": selected_types
-            })
+            self.__parse_item_with_type(
+                **{
+                    **item,
+                    "graph_key": graph_key,
+                    "depth": depth,
+                    "selected_types": selected_types,
+                }
+            )
             for item in non_parsed_items
         ]
 
-    def relate(self, graph_key: str, parent_id: str, children_ids: Set[str], depth: int):
+    def relate(
+        self,
+        graph_key: str,
+        parent_id: str,
+        children_ids: Set[str],
+        depth: int,
+    ):
         """
         Add edges between result/query nodes
 
