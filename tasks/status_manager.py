@@ -65,8 +65,11 @@ class StatusManager(metaclass=ThreadSafeSingleton):
         Returns:
             dict with 'status', 'result' and 'error' keys
         """
+        result = self.results.get(task_id, {})
+        if result is not None and not isinstance(result, dict):
+            result = {"result": result}
         return {
             "status": self.status.get(task_id, ValidStatus.NOT_FOUND).value,
-            "result": self.results.get(task_id),
+            **result,
             "error": self.errors.get(task_id)
         }

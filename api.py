@@ -1,59 +1,64 @@
-import http.client
-import threading
-from typing import List
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from tornado.web import RequestHandler
+import commons
+import config
+from tasks import TaskManager, StatusManager
+from commons import str_to_values
 
-from commons import StreamlitApplication, str_to_values, with_streamlit_context
-from tasks.task_manager import TaskManager
+spg_api = FastAPI()
 
+origins = [
+    # "http://localhost",
+    "*",
+]
 
-st_app = StreamlitApplication()
-
-spg_api_client = http.client.HTTPConnection("localhost", 8501)
-
-
-@st_app.api_route("/api/search/{keywords}/{selected_types}")
-class SearchHandler(RequestHandler):
-    def get(self, keywords: str, selected_types: str) -> None:
-        """
-        Start a search
-        Args:
-            keywords: search keywords, + separated
-            selected_types: search allowed item types, + separated
-        """
-        threading.Thread(
-            target=self.__search,
-            kwargs={
-                "keywords": str_to_values(keywords, sep="+"),
-                "selected_types": str_to_values(selected_types, sep="+"),
-            },
-        ).start()
-
-    @with_streamlit_context
-    def __search(self, keywords: List[str], selected_types: List[str]):
-        ctrl = TaskManager(selected_types=selected_types)
-        ctrl.set_graph_as_html(keywords=keywords, cache=False, save=True)
+spg_api.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-@st_app.api_route("/api/expand_not_used/{node_id}/{selected_types}")
-class ExpandHandler(RequestHandler):
-    def get(self, node_id: str, selected_types: str) -> None:
-        """
-        Expand graph from a node
-        Args:
-            node_id: id of the node in the store
-            selected_types: expand allowed item types, + separated
-        """
-        threading.Thread(
-            target=self.__expand,
-            kwargs={
-                "node_id": node_id,
-                "selected_types": str_to_values(selected_types, sep="+"),
-            },
-        ).start()
+@spg_api.get("/api/search/{keywords}/{selected_types}")
+def search(keywords: str, selected_types: str):
+    # Parse params
+    keywords = commons.str_to_values(keywords, sep="+")
+    selected_types = commons.str_to_values(selected_types, sep="+")
 
-    @with_streamlit_context
-    def __expand(self, node_id: str, selected_types: List[str]):
-        ctrl = TaskManager(selected_types=selected_types)
-        ctrl.expand_from_node(node_id=node_id)
+    # Start search
+    ctrl = TaskManager(selected_types=selected_types)
+    return ctrl.search_task(keywords=keywords, save=True)
+
+
+@spg_api.get("/api/expand/{node_id}/{selected_types}")
+def start_expand(node_id: str, selected_types: str):
+    ctrl = TaskManager(selected_types=str_to_values(selected_types, sep="+"))
+    task_id = ctrl.start_expand_task(node_id=node_id)
+    return task_id
+
+
+@spg_api.get("/api/tasks/{task_id}/status")
+def get_task_status(task_id: str):
+    return StatusManager().get_status_and_result(task_id=task_id)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(spg_api, host="127.0.0.1", port=8502, log_level="info")
+
+    # Thread version
+    import threading
+
+    threading.Thread(
+        target=uvicorn.run,
+        kwargs={
+            "app": spg_api,
+            "host": config.API_HOST,
+            "port": config.API_PORT,
+            "log_level": "info",
+        },
+    ).start()

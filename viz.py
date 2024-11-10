@@ -1,12 +1,14 @@
+"""
+Visualization only -> build PyVis graph
+"""
 from pathlib import Path
-from typing import Union
+from typing import Any, Dict, List, Union
 
-import streamlit as st
 import networkx as nx
 from pyvis.network import Network
 from jinja2 import Environment, FileSystemLoader
 
-from commons import ThreadSafeSingleton
+import commons
 from config import PROJECT_ROOT, OUTPUT_DIR
 
 
@@ -22,8 +24,37 @@ def sample_graph():
 
 class GraphVisualizer:
 
-    def __init__(self, graph: nx.Graph = None, bg_color: str = "#ffffff", height: str = "1200px"):
-        self.__graph = graph
+    def __init__(
+            self,
+            graph: nx.Graph = None,
+            nodes: List[Dict[str, Any]] = None,
+            edges: List[Dict[str, Any]] = None,
+            bg_color: str = "#ffffff",
+            height: str = "1200px",
+    ):
+        """
+
+        Args:
+            graph: if provided, nodes and edges None
+            nodes: if provided, graph None
+            edges:  if provided, graph None
+            bg_color: background for the graph
+            height: height of the graph div
+        """
+        if graph is not None and (nodes is not None or edges is not None):
+            raise ValueError(
+                "[viz.GraphVisualizer.__init__] graph and (nodes and/or edges) both provided."
+            )
+
+        if graph:
+            self.__graph = graph
+        else:
+            assert nodes is not None
+            self.__graph = commons.di_graph_from_list_of_dict(
+                nodes=nodes,
+                edges=edges,
+            )
+
         self.__network = Network(bgcolor=bg_color, height=height, width="100%",)
         self.__network.from_nx(self.__graph)
 
@@ -44,36 +75,12 @@ class GraphVisualizer:
         html_str = self.__network.generate_html(notebook=False)
         return html_str
 
-    def set_singleton(self) -> str:
-        return GraphVisualizerSingleton().set_graph(self)
-
     @staticmethod
     def show_example():
         g = Network()
         g.from_nx(nx.florentine_families_graph())
         g.show_buttons(filter_=["nodes"])
         g.show(str(OUTPUT_DIR / "example.html"), notebook=False)
-
-
-class GraphVisualizerSingleton(metaclass=ThreadSafeSingleton):
-    DEFAULT = '<strong>Enter search keywords to compute the graph </strong>'
-
-    def __init__(self):
-        self.__graph_as_html = GraphVisualizerSingleton.DEFAULT
-
-    @property
-    def graph_as_html(self):
-        return self.__graph_as_html
-
-    def reset_graph(self):
-        self.__graph_as_html = GraphVisualizerSingleton.DEFAULT
-
-    def set_loading(self):
-        self.__graph_as_html = open(PROJECT_ROOT / "templates" / "loader.html").read()
-
-    def set_graph(self, graph_visualizer: GraphVisualizer) -> str:
-        self.__graph_as_html = graph_visualizer.html_str()
-        return self.__graph_as_html
 
 
 if __name__ == "__main__":

@@ -23,7 +23,6 @@ from items.item import (
     SpotifyItem,
     ValidItem,
 )
-from viz import GraphVisualizer
 
 
 class ItemStore(metaclass=ThreadSafeSingleton):
@@ -149,16 +148,6 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         )
         return query_key
 
-    def set_singleton_viz(self, graph_key: str):
-        """
-        Refreshed the visualization singleton with graph from store
-        Args:
-            graph_key: identifies the graph to select
-        """
-        GraphVisualizer(
-            self.get_graph(graph_key)
-        ).set_singleton()
-
     def __parse_item(self, item: Dict[str, Any], item_type: ValidItem) -> SpotifyItem:
         """
         Parse dict into subclass of items.SpotifyItem
@@ -248,4 +237,9 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         """
         for child_id in children_ids:
             # children first for color
-            self._graphs[graph_key].add_edge(child_id, parent_id, weight=self._depth_edge_weight(depth), id=f"{parent_id}_{child_id}")
+            self._graphs[graph_key].add_edge(
+                child_id,
+                parent_id,
+                weight=self._depth_edge_weight(depth),
+                id=f"{parent_id}_{child_id}",
+            )

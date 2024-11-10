@@ -1,28 +1,17 @@
+"""
+Streamlit app to interact with the graph
+"""
+from typing import Any, Dict, List
+import json
 import streamlit as st
 import streamlit.components.v1 as components
 
 from items import ValidItem
-from viz import GraphVisualizerSingleton
+from viz import GraphVisualizer
 from commons import values_to_str
+from web_clients import sp_graph_client
 
-from api import spg_api_client
 # --- Functions and control vars---
-
-# Fast API
-import uvicorn
-import threading
-from api_v2 import api_v2
-threading.Thread(
-    target=uvicorn.run,
-    kwargs={
-        "app": api_v2,
-        "host": "127.0.0.1",
-        "port": 8502,
-        "log_level": "info",
-
-    },
-).start()
-# End Fast API
 
 TYPES = {
     ValidItem.ALBUM.value,
@@ -31,6 +20,7 @@ TYPES = {
 }
 
 
+@st.fragment
 def launch_search():
     keywords_str = values_to_str(
         [kw.strip() for kw in keywords.split(" ") if kw],
@@ -40,14 +30,24 @@ def launch_search():
         [type_ for type_, is_selected in selected.items() if is_selected],
         sep="+"
     )
-    spg_api_client.request(method="GET", url=f"/api/search/{keywords_str}/{selected_str}")
+    sp_graph_client.request(method="GET", url=f"/api/search/{keywords_str}/{selected_str}")
+    search_response = sp_graph_client.getresponse()
+    body_ = json.loads(search_response.read())
+    print(f"Got body {body_}")
+    refresh_graph(nodes=body_.get("nodes"), edges=body_.get('edges'))
 
 
-@st.fragment(run_every=1)
-def periodic_refresh():
+@st.fragment
+def refresh_graph(nodes: List[Dict[str, Any]] = None, edges: List[Dict[str, Any]] = None):
     with placeholder.container():
-        gvs = GraphVisualizerSingleton()
-        components.html(gvs.graph_as_html, height=1200,)
+        if not keywords or nodes is None:
+            st.markdown('**Enter search keywords to compute the graph**')
+        else:
+            gv = GraphVisualizer(
+                nodes=nodes,
+                edges=edges,
+            )
+            components.html(gv.html_str(), height=1200,)
 
 
 # --- Streamlit components ---
@@ -63,6 +63,10 @@ st.markdown("_Powered by Spotify Web API_")
 
 # --- Search params ---
 keywords = st.text_input(label="Search spotify: ")
+st.markdown("""
+*Alt/Option click*: Open Spotify\\
+*Double click*: Expand graph around node
+""")
 
 cols = st.columns(10)
 selected = {}
@@ -72,7 +76,7 @@ for i, _type in enumerate(TYPES):
 
 placeholder = st.empty()
 
-periodic_refresh()
+refresh_graph()
 
 if keywords:
     launch_search()

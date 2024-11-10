@@ -43,6 +43,7 @@ class SpotifyItem(BaseModel):
     def __hash__(self):
         return self.id.__hash__()
 
+    @property
     @abstractmethod
     def recommendation_query(self) -> Dict[str, Any]:
         """
@@ -79,6 +80,7 @@ class Artist(SpotifyItem):
         if api_result:
             self.genres = api_result.get("genres")
 
+    @property
     def recommendation_query(self) -> Dict[str, Any]:
         return {
             "seed_artists": tuple([self]),
@@ -98,6 +100,7 @@ class Album(SpotifyItem):
     release_date: str
     artists: List[Artist]
 
+    @property
     def recommendation_query(self) -> Dict[str, Any]:
         return {
             "seed_artists": tuple(self.artists),
@@ -133,6 +136,7 @@ class Playlist(SpotifyItem):
         artists = [Artist(**artist_info) for artist_info in api_result.get('track', {}).get("artists", [])]
         return functools.reduce(add, [a.genres for a in artists], [])
 
+    @property
     def recommendation_query(self) -> Dict[str, Any]:
         return {
             "seed_genres": tuple(self.genres),
@@ -152,6 +156,7 @@ class Track(SpotifyItem):
     artists: List[Artist]
     preview_url: Optional[str] = None
 
+    @property
     def recommendation_query(self) -> Dict[str, Any]:
         # album_rec_query = self.album.recommendation_query() if self.album else {}
         # artist_rec_queries = dict_extend(*[a.recommendation_query() for a in self.artists])

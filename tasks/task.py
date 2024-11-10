@@ -47,7 +47,7 @@ class Task:
             task_result = self.target(**self.kwargs)
         except Exception as e:
             self.logger(f"Failed task {self.task_uuid}")
-            StatusManager.fail_task(task_id=self.task_uuid, error=e)
+            StatusManager().fail_task(task_id=self.task_uuid, error=e)
             tb = e.__traceback__
             raise e.with_traceback(tb)
 

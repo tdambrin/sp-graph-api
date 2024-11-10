@@ -47,9 +47,9 @@ class SpotifyWrapper:
     def search(
         self,
         keywords: List[str],
+        graph_key: str,
         restricted_types: List[str] = None,
         max_depth: int = 2,
-        set_singleton: bool = False,
         **kwargs,
     ) -> str:
         """
@@ -57,9 +57,9 @@ class SpotifyWrapper:
 
         Args:
             keywords: search keywords
+            graph_key: key of the graph it corresponds to in the store
             restricted_types: result items type restriction. All if None.
             max_depth: recommendations start at level 2, inclusive
-            set_singleton: whether to update the viz singleton view incrementally. False by default.
 
         Returns:
             id of the graph
@@ -96,8 +96,6 @@ class SpotifyWrapper:
             children_ids={parsed_item.id for parsed_item in parsed_items},
             depth=1,
         )
-        if set_singleton:
-            ItemStore().set_singleton_viz(graph_key)
 
         # Expand search
         if max_depth <= 1:
@@ -110,7 +108,6 @@ class SpotifyWrapper:
                 depth=2,
                 max_depth=max_depth,
                 restricted_types=restricted_types,
-                set_singleton=set_singleton,
                 **kwargs
             )
         return graph_key
@@ -122,7 +119,6 @@ class SpotifyWrapper:
         depth: int,
         max_depth: int,
         restricted_types: List[str],
-        set_singleton: bool = False,
         **kwargs
     ):
         """
@@ -133,7 +129,6 @@ class SpotifyWrapper:
             depth: current depth
             max_depth: maximum depth allowed, inclusive
             restricted_types: level result item type restriction. All if None.
-            set_singleton: whether to update the viz singleton view incrementally. False by default.
             **kwargs:
 
         Returns:
@@ -168,8 +163,6 @@ class SpotifyWrapper:
             children_ids={parsed_item.id for parsed_item in parsed_items},
             depth=depth,
         )
-        if set_singleton:
-            ItemStore().set_singleton_viz(graph_key)
 
         for item in parsed_items:
             self.find_related(
@@ -195,8 +188,9 @@ class SpotifyWrapper:
         all_results = {}
         if limit := limit_per_type.get(items.ValidItem.TRACK.value):
             all_results = utils.dict_extend(all_results, self._recommend_track(
-                **item.recommendation_query(),
+                **item.recommendation_query,
                 limit=limit,
+                **kwargs,
             ))
         if limit := limit_per_type.get(items.ValidItem.ALBUM.value):
             # get artists
@@ -212,7 +206,7 @@ class SpotifyWrapper:
             # get artists albums
             all_results = utils.dict_extend(
                 all_results,
-                self._artists_albums(artists_ids=tuple(artist_ids), limit=limit)
+                self._artists_albums(artists_ids=tuple(artist_ids), limit=limit, **kwargs)
             )
         if limit := limit_per_type.get(items.ValidItem.ARTIST.value):
             if item.type == items.ValidItem.ARTIST:
@@ -233,7 +227,10 @@ class SpotifyWrapper:
     @functools.cache
     def _related_artists(self, artists_ids: Tuple[str], limit: int = 5, **kwargs) -> Dict[str, Any]:
         all_related = functools.reduce(operator.add, [
-            self.__client.artist_related_artists(artist_id=artists_id)['artists'] for artists_id in artists_ids
+            self.__client.artist_related_artists(
+                artist_id=artists_id,
+                **kwargs
+            )['artists'] for artists_id in artists_ids
         ])
         return {
             "artists": list({a['id']: a for a in all_related}.values())[:limit]  # removed duplicates
@@ -250,7 +247,12 @@ class SpotifyWrapper:
             )
         }
         all_albums = functools.reduce(operator.add, [
-            self.__client.artist_albums(artist_id=artists_id, include_groups="album", limit=limit_for_artist)['items']
+            self.__client.artist_albums(
+                artist_id=artists_id,
+                include_groups="album",
+                limit=limit_for_artist,
+                **kwargs
+            )['items']
             for artists_id, limit_for_artist in limit_per_artist.items()
         ])
         return {
@@ -271,6 +273,7 @@ class SpotifyWrapper:
             seed_genres=seed_genres[:5] if seed_genres else None,
             seed_tracks=[t.id for t in seed_tracks][:5] if seed_tracks else None,
             limit=limit,
+            **kwargs,
         )
 
     @staticmethod

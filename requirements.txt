@@ -5,7 +5,8 @@ networkx
 streamlit==1.39.0
 pydantic
 jinja2
-tornado # to be removed
+numpy
+
 # Api
 uvicorn
 fastapi

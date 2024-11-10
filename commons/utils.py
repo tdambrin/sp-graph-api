@@ -4,6 +4,8 @@ from copy import deepcopy
 
 import yaml
 import numpy as np
+import networkx as nx
+import constants
 
 
 def load_from_yml(
@@ -62,10 +64,10 @@ def scale_weights(
             "Target sum smaller than number of bins, would result in bins deletion "
             f"target_sum={target_sum}, relative_weights: {relative_weights}"
         )
-    N = len(relative_weights)
-    res = [1] * N if include_all else [0] * N
+    n = len(relative_weights)
+    res = [1] * n if include_all else [0] * n
     remaining = [w-1 for w in relative_weights] if include_all else relative_weights.copy()
-    used = N if include_all else 0
+    used = n if include_all else 0
     _next = np.argmax(remaining)
     while used < target_sum and remaining[_next] > 0:
         remaining[_next] -= 1
@@ -83,3 +85,61 @@ def scale_weights(
         ]
 
     return res
+
+
+def nodes_edges_to_list_of_dict(
+    g: type[nx.DiGraph],
+    which: str,
+    system_: str = constants.VIS_JS_SYS,
+) -> List[Dict[str, Any]]:
+    """
+    Convert graph nodes/edges to a list of dicts
+
+    Args:
+        g: graph to extract nodes or edges
+        which: 'nodes' or 'edges'
+        system_: 'python' or 'vis.js' to define serialization api keys
+
+    Returns:
+        list of [{'id': node/edge id, **properties}]
+    """
+
+    assert which in (constants.NODES, constants.EDGES)
+
+    if which == constants.NODES:
+        nodes_ = g.nodes(data=True)
+        return [{'id': i_id, **i_props} for i_id, i_props in nodes_]
+
+    assert system_ in (constants.VIS_JS_SYS, constants.PYTHON_SYS)
+    from_key_name = "u_of_edge" if system_ == constants.PYTHON_SYS else "from"
+    to_key_name = "v_of_edge" if system_ == constants.PYTHON_SYS else "to"
+    edges_ = g.edges(data=True)
+    return [{from_key_name: source_id, to_key_name: to_id, **i_props} for source_id, to_id, i_props in edges_]
+
+
+def di_graph_from_list_of_dict(
+    nodes: List[Dict[str, Any]],
+    edges: List[Dict[str, Any]] = None
+) -> nx.DiGraph:
+    """
+    Create a nx.DiGraph from nodes and edges as list of props with their ids
+    Args:
+        nodes: [{'id': node/edge id, **properties}]
+        edges (optional): [{'id': node/edge id, **properties}]
+
+    Returns:
+        nx.DiGraph filled
+    """
+    g_ = nx.DiGraph()
+    for node in nodes:
+        g_.add_node(
+            node_for_adding=node["id"],
+            **{key: value for key, value in node.items() if key != "id"}
+        )
+    if edges is None:
+        return g_
+    for edge in edges:
+        g_.add_edge(
+            **edge
+        )
+    return g_
