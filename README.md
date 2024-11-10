@@ -1,5 +1,14 @@
 # Spotify Graph Search
 
+## Dev
+
+To run locally, simply do 
+
+```bash
+$ make install
+$ make run
+```
+
 ## Version 0.1 - Build graph from query :white_check_mark:
  
 - Depth 2 graph from query node including all types

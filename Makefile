@@ -1,4 +1,5 @@
 MAKE = make
+PYTHON = python
 
 check-deps:  ## Check new versions and update deps
 	$(PYTHON) -m pur -r requirements-dev.txt -d
@@ -39,5 +40,5 @@ web_internal:
 
 web:
 	${MAKE} -B web_internal
-all:
+run:
 	${MAKE} -B -j 2 api web
