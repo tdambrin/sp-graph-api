@@ -41,7 +41,7 @@ def search(keywords: str, selected_types: str):
 def start_expand(node_id: str, selected_types: str):
     ctrl = TaskManager(selected_types=str_to_values(selected_types, sep="+"))
     task_id = ctrl.start_expand_task(node_id=node_id)
-    return task_id
+    return {"task_id": task_id}
 
 
 @spg_api.get("/api/tasks/{task_id}/status")

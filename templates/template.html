@@ -596,20 +596,21 @@
                   };
 
                   // Expand from node
-                  network.on("doubleClick", function (params) {
+                  network.on("doubleClick", async function (params) {
                     var node = nodes.get(params.nodes[0]);
                     if (!node.expand_enabled) {
                       return
                     }
                     const url = `http://localhost:8502/api/expand/${node.id}/${node.selected_types}`
                     console.log("Expanding from node: ", node.label);
-                    fetch(url, {
+                    response = await fetch(url, {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json'
                         }
                     });
-                    check_status(task_id, 2000, 2000);
+                    const resp_body = await response.json();
+                    check_status(resp_body.task_id, 2000, 2000);
                   });
 
                   // Open Spotify item link on alt click
