@@ -15,14 +15,7 @@ import networkx as nx
 import commons
 import config
 from commons.metaclasses import ThreadSafeSingleton
-from items.item import (
-    Album,
-    Artist,
-    Playlist,
-    Track,
-    SpotifyItem,
-    ValidItem,
-)
+from items.item import Album, Artist, Playlist, SpotifyItem, Track, ValidItem
 
 
 class ItemStore(metaclass=ThreadSafeSingleton):

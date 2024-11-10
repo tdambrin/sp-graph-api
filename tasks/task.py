@@ -1,9 +1,8 @@
 """
 Task model to automatically set task status and result
 """
-from typing import Any, Callable
-
 import threading
+from typing import Any, Callable
 
 from tasks.status_manager import StatusManager, ValidStatus
 

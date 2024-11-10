@@ -1,10 +1,2 @@
-from .item import (
-    SpotifyItem,
-    ValidItem,
-    Album,
-    Artist,
-    Playlist,
-    Track,
-)
-
+from .item import Album, Artist, Playlist, SpotifyItem, Track, ValidItem
 from .store import ItemStore

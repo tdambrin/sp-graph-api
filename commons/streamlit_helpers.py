@@ -1,20 +1,14 @@
 import gc
 import logging
 import re
-from typing import Callable, List, Optional, Type
-
-from tornado.routing import PathMatches, Rule
-from tornado.web import Application, RequestHandler
-
 import threading
-from typing import Any, TypeVar, cast
+from typing import Any, Callable, List, Optional, Type, TypeVar, cast
 
 from streamlit.errors import NoSessionContext
-
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    SCRIPT_RUN_CONTEXT_ATTR_NAME,
-    get_script_run_ctx,
-)
+    SCRIPT_RUN_CONTEXT_ATTR_NAME, get_script_run_ctx)
+from tornado.routing import PathMatches, Rule
+from tornado.web import Application, RequestHandler
 
 T = TypeVar("T")
 

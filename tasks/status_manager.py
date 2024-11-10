@@ -1,8 +1,8 @@
 """
 Singleton to manage task status and results
 """
-from typing import Any, Dict, Optional
 from enum import Enum
+from typing import Any, Dict, Optional
 
 from commons import ThreadSafeSingleton
 

@@ -9,11 +9,11 @@ Contains:
 
 
 import functools
-from operator import add
 from abc import abstractmethod
-from typing import Any, Dict, List, Optional
 from enum import Enum
 from functools import cached_property
+from operator import add
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 

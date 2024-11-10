@@ -1,10 +1,11 @@
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Union
-from copy import deepcopy
 
-import yaml
-import numpy as np
 import networkx as nx
+import numpy as np
+import yaml
+
 import constants
 
 

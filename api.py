@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import commons
 import config
-from tasks import TaskManager, StatusManager
 from commons import str_to_values
+from tasks import StatusManager, TaskManager
 
 spg_api = FastAPI()
 

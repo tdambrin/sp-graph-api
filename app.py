@@ -1,14 +1,15 @@
 """
 Streamlit app to interact with the graph
 """
-from typing import Any, Dict, List
 import json
+from typing import Any, Dict, List
+
 import streamlit as st
 import streamlit.components.v1 as components
 
+from commons import values_to_str
 from items import ValidItem
 from viz import GraphVisualizer
-from commons import values_to_str
 from web_clients import sp_graph_client
 
 # --- Functions and control vars---

@@ -1,16 +1,16 @@
 """
 Task Manager to instantiate and handle tasks
 """
-from typing import Any, Dict, List
 import uuid
+from typing import Any, Dict, List
 
 import commons
 import constants
 from api_clients.wrappers import SpotifyWrapper
-from items.store import ItemStore
-from viz import GraphVisualizer
 from config import OUTPUT_DIR
+from items.store import ItemStore
 from tasks.task import Task
+from viz import GraphVisualizer
 
 
 class TaskManager:

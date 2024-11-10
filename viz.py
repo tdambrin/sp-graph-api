@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Union
 
 import networkx as nx
-from pyvis.network import Network
 from jinja2 import Environment, FileSystemLoader
+from pyvis.network import Network
 
 import commons
-from config import PROJECT_ROOT, OUTPUT_DIR
+from config import OUTPUT_DIR, PROJECT_ROOT
 
 
 def sample_graph():
