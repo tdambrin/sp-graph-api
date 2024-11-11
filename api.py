@@ -75,7 +75,7 @@ async def get_documentation():
 
 
 @spg_api.get("/health", include_in_schema=False)
-async def get_documentation():
+async def health():
     return {"state": "up"}
 
 
