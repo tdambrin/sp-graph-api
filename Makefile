@@ -1,3 +1,7 @@
+ENV ?=
+include .env
+-include .env.$(ENV)
+
 MAKE = make
 PYTHON = python
 
@@ -40,13 +44,32 @@ dev-install-deps:
 
 dev-install: dev-install-deps update-dev-deps mypy-install enable-pre-commit
 
+check-env:
+ifndef SPG_API_HOST
+abort:
+	@echo "SPG_API_HOST" not set
+endif
+
+
+set-api-in-template: check-env
+	sed -i -e "s/SPG_API_HOST/$(SPG_API_HOST)/g" templates/template.html
+	sed -i -e "s/SPG_API_PORT/$(SPG_API_PORT)/g" templates/template.html
+
 api:
-	uvicorn api:spg_api --host 127.0.0.1 --port 8502
+	uvicorn api:spg_api --host 127.0.0.1 --port 8502 --workers 1
 
 web_internal:
-	streamlit run app.py
+	streamlit run app.py -- --env $(ENV)
 
-web:
+web: set-api-in-template
 	${MAKE} -B web_internal
+
+web-local:
+	${MAKE} set-api-in-template ENV=local
+	${MAKE} -B web_internal ENV=local
+
 run:
-	${MAKE} -B -j 2 api web
+	${MAKE} -B web
+
+run-local:
+	${MAKE} -B -j 2 api web-local

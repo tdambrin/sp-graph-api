@@ -34,6 +34,17 @@ class StatusManager(metaclass=ThreadSafeSingleton):
     def _set_result(self, task_id: str, result: Any):
         self.results[task_id] = result
 
+    @property
+    def all_tasks(self):
+        return [
+            {
+                "task_id": task_id,
+                "result": self.results.get(task_id),
+                "error": self.errors.get(task_id),
+            }
+            for task_id in self.status
+        ]
+
     def create_task(self, task_id: str) -> ValidStatus:
         return self._set_status(task_id=task_id, status=ValidStatus.CREATED)
 

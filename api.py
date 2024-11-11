@@ -7,7 +7,6 @@ from commons import str_to_values
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.openapi.utils import get_openapi
 from items import ItemStore
 from status import StatusManager
 from tasks import TaskManager
@@ -49,6 +48,11 @@ def start_expand(node_id: str, selected_types: str):
 @spg_api.get("/api/tasks/{task_id}/status")
 def get_task_status(task_id: str):
     return StatusManager().get_status_and_result(task_id=task_id)
+
+
+@spg_api.get("/api/tasks")
+def get_all_tasks():
+    return StatusManager().all_tasks
 
 
 @spg_api.get("/api/items")

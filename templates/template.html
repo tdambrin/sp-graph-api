@@ -548,7 +548,14 @@
                       });
                   {% endif %}
 
-                  // ---- Helpers functions --------
+                  // ---- Helpers functions and vars --------
+
+                  const API_HOST = "SPG_API_HOST";
+                  const API_PORT = parseInt("SPG_API_PORT");
+                  var API_BASE_URL = `https://${API_HOST}`;
+                  if (!isNaN(API_PORT)) {
+                    API_BASE_URL = `http://${API_HOST}:${API_PORT}`;
+                  }
 
                   const asyncTimeout = (ms) => {
                     return new Promise((resolve) => {
@@ -565,7 +572,8 @@
 
                   async function check_status(task_id, initial_delay, next_delay) {
                     await asyncTimeout(initial_delay);
-                    const url = `http://localhost:8502/api/tasks/${task_id}/status`;
+                    const url = `${API_BASE_URL}/api/tasks/${task_id}/status`;
+                    console.log("Calling ", url);
                     response = await fetch(url, {
                         method: 'GET',
                         headers: {
@@ -603,7 +611,7 @@
                     if (!node.expand_enabled) {
                       return
                     }
-                    const url = `http://localhost:8502/api/expand/${node.id}/${node.selected_types}`
+                    const url = `${API_BASE_URL}/api/expand/${node.id}/${node.selected_types}`
                     console.log("Expanding from node: ", node.label);
                     response = await fetch(url, {
                         method: 'GET',

@@ -68,7 +68,6 @@ class TaskManager:
             graph_key=graph_key,
             max_depth=2,
             restricted_types=self._selected_types,
-            # read_cache=True,
             set_singleton=True,
             write_cache=True,
             task_id=task_id,

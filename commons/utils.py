@@ -143,5 +143,19 @@ def di_graph_from_list_of_dict(
     if edges is None:
         return g_
     for edge in edges:
-        g_.add_edge(**edge)
+        g_.add_edge(
+            u_of_edge=edge.get("u_of_edge") or edge.get("from"),
+            v_of_edge=edge.get("v_of_edge") or edge.get("to"),
+            **{
+                key: value
+                for key, value in edge.items()
+                if key
+                not in (
+                    "from",
+                    "to",
+                    "u_of_edge",
+                    "v_of_edge",
+                )
+            },
+        )
     return g_
