@@ -41,7 +41,7 @@ $ make run
 - [x] Refactor in API vs Streamlit (Remove streamlit API wrapper, use fastapi)
 - [x] Create tasks from Graph JS by calling API and fetch until completed/failed
 - [x] Restore search incremental display
-- [ ] Open spotify -> switch to shift click
-- [ ] Delete node on alt click
+- [x] Open spotify -> switch to shift click
+- [x] Delete node on alt click
 - [ ] Make API multi user with sessions
 - [ ] Interactive graph - not just player, update when (un)select types, load progressively

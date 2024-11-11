@@ -548,7 +548,7 @@
                       });
                   {% endif %}
 
-                  // ---- Interactive functions --------
+                  // ---- Helpers functions --------
 
                   const asyncTimeout = (ms) => {
                     return new Promise((resolve) => {
@@ -595,6 +595,8 @@
                     }
                   };
 
+                  // ---- Interactive functions --------
+
                   // Expand from node
                   network.on("doubleClick", async function (params) {
                     var node = nodes.get(params.nodes[0]);
@@ -613,13 +615,16 @@
                     check_status(resp_body.task_id, 2000, 2000);
                   });
 
-                  // Open Spotify item link on alt click
+                  // Click
+                  // + Alt : remove node
+                  // + Shift : Open spotify
                   network.on("selectNode", function (params) {
-                    if (params.event.srcEvent.altKey) {  // open spotify
-                      if (params.nodes.length === 1) {
-                        var node = nodes.get(params.nodes[0]);
-                        window.open(node.href, '_blank');
-                      }
+                    var node = nodes.get(params.nodes[0]);
+                    if (params.event.srcEvent.altKey) {  // remove node
+                      nodes.remove(node);
+                    }
+                    if (params.event.srcEvent.shiftKey) {  // open spotify
+                      window.open(node.href, '_blank');
                     }
                   });
 
