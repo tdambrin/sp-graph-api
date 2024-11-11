@@ -51,7 +51,7 @@ def get_task_status(task_id: str):
     return StatusManager().get_status_and_result(task_id=task_id)
 
 
-@spg_api.get("api/items")
+@spg_api.get("/api/items")
 def get_current_items():
     current_graph = ItemStore().get_current_graph()
     return {
@@ -60,7 +60,7 @@ def get_current_items():
     }
 
 
-@spg_api.get("api/nodes/{node_id}")
+@spg_api.get("/api/nodes/{node_id}")
 def get_node(node_id: str):
     return {"node": ItemStore().get(node_id)}
 
