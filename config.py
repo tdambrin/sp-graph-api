@@ -8,7 +8,13 @@ PROJECT_ROOT = Path(__file__).parent
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
 
 CONF = load_from_yml(PROJECT_ROOT / "conf.yml")
-SPOTIFY_CONF = CONF["SPOTIFY"]
+# SPOTIFY_CONF = CONF["SPOTIFY"]
+
+dotenv_path = Path(".env")
+if dotenv_path.is_file():
+    from dotenv import load_dotenv
+
+    load_dotenv(dotenv_path=dotenv_path)
 
 
 class NodeColor(Enum):

@@ -1,1 +1,1 @@
-web: gunicorn -w 1 -k uvicorn.workers.UvicornWorker api:spg_api
+web: uvicorn api:spg_api --host=0.0.0.0 --port=${PORT:-5000}

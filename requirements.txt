@@ -6,6 +6,7 @@ streamlit==1.39.0
 pydantic
 jinja2
 numpy
+python-dotenv
 
 # Api
 uvicorn

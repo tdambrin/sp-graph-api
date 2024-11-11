@@ -9,6 +9,8 @@ import yaml
 
 
 def load_from_yml(path: Union[str, Path]) -> Dict[str, Any]:
+    if not Path(path).exists():
+        return {}
     with open(path, "r") as f:
         content = yaml.safe_load(f)
     return content

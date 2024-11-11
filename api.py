@@ -6,6 +6,8 @@ import constants
 from commons import str_to_values
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
 from items import ItemStore
 from status import StatusManager
 from tasks import TaskManager
@@ -61,6 +63,16 @@ def get_current_items():
 @spg_api.get("api/nodes/{node_id}")
 def get_node(node_id: str):
     return {"node": ItemStore().get(node_id)}
+
+
+@spg_api.get("/docs", include_in_schema=False)
+async def get_documentation():
+    return get_swagger_ui_html(openapi_url="/openapi.json", title="docs")
+
+
+@spg_api.get("/health", include_in_schema=False)
+async def get_documentation():
+    return {"state": "up"}
 
 
 if __name__ == "__main__":
