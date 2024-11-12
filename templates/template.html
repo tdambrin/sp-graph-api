@@ -550,6 +550,8 @@
 
                   // ---- Helpers functions and vars --------
 
+                  // -- SPG API --
+
                   const API_HOST = "SPG_API_HOST";
                   const API_PORT = parseInt("SPG_API_PORT");
                   var API_BASE_URL = `https://${API_HOST}`;
@@ -603,6 +605,16 @@
                     }
                   };
 
+                  // -- Audio --
+                  var last_started_audio_ts = Date.now();
+
+                  function breakAudio(started_at){
+                    if ((!window.currentAudio.paused) & (started_at === last_started_audio_ts)) {
+                        window.currentAudio.pause();
+                        window.currentAudio.currentTime = 0;
+                    }
+                  };
+
                   // ---- Interactive functions --------
 
                   // Expand from node
@@ -645,14 +657,11 @@
                     if (prev_url) {
                         window.currentAudio = new Audio(prev_url);
                         if (window.currentAudio) {
+                            var start_at = Date.now();
+                            last_started_audio_ts = start_at;
                             window.currentAudio.play();
                         }
-                        setTimeout(function(){
-                            if (window.currentAudio) {
-                                window.currentAudio.pause();
-                                window.currentAudio.currentTime = 0;
-                            }
-                        }, 30000);
+                        setTimeout(breakAudio, 30000, start_at);
                        }
                   });
 
