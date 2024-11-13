@@ -13,17 +13,16 @@ To run locally, simply do
 
 ```bash
 $ make install
-$ make run
+$ make run-local
 ```
 
 ## Version 0.1 - Build graph from query :white_check_mark:
 
-- Depth 2 graph from query node including all types
-- Recommendations are tracks only
-- Graph viz ugly but functional
+- [x] Depth 2 graph from query node including all types
+- [x] Recommendations are tracks only
+- [x] Graph viz ugly but functional
 
 ## Version 0.2 - Improve viz and interactions
-
 - [x] Different colors for different types
 - [x] Description on hover
 - [x] Preview picture
@@ -43,5 +42,17 @@ $ make run
 - [x] Restore search incremental display
 - [x] Open spotify -> switch to shift click
 - [x] Delete node on alt click
+- [x] Interactive graph - not just player, update when (un)select types, load progressively
 - [ ] Make API multi user with sessions
-- [ ] Interactive graph - not just player, update when (un)select types, load progressively
+
+# Version 0.5 - UX
+- [ ] Artists connect to artists and a track is only connected to an album or artist it is part of
+- [ ] Search by popularity
+  - either automatically get diverse popularity scores (i.e. if taylor then not ariana)
+  - or set popularity thresholds thresholds
+- [ ] Export to playlist
+- [ ] Match with user's knowledge
+  - flag new vs known
+
+# Version 0.6 - Enable graph ops
+- [ ] Add visual directions to edges and semantic labels to edges (TRACK_OF, SIMILAR_TO, ALBUM_OF, AUTHOR_OF)
