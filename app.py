@@ -75,7 +75,7 @@ with st.sidebar:
     keywords = st.text_input(label="Search spotify: ")
     st.markdown(
         """
-        *Shift clicl*: Open Spotify\\
+        *Shift click*: Open Spotify\\
         *Alt/Option click*: Delete node\\
         *Double click*: Expand graph around node
         """
