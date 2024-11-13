@@ -566,16 +566,15 @@
                   };
 
                   function handle_task_result(body) {
-                    var new_nodes = body.nodes;
+                    var new_nodes = body?.nodes ?? [];
                     new_nodes.forEach( new_node => {if (!nodes.getIds().includes(new_node.id)) {nodes.add(new_node)}});
-                    var new_edges = body.edges;
+                    var new_edges = body?.edges ?? [];
                     new_edges.forEach( new_edge => {if (!edges.getIds().includes(new_edge.id)) {edges.add(new_edge)}});
                   }
 
                   async function check_status(task_id, initial_delay, next_delay) {
                     await asyncTimeout(initial_delay);
                     const url = `${API_BASE_URL}/api/tasks/${task_id}/status`;
-                    console.log("Calling ", url);
                     response = await fetch(url, {
                         method: 'GET',
                         headers: {
@@ -605,6 +604,18 @@
                     }
                   };
 
+                  async function expand(node) {
+                      const url = `${API_BASE_URL}/api/expand/${node.id}/${node.selected_types}`
+                        response = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        const resp_body = await response.json();
+                        check_status(resp_body.task_id, 2000, 2000);
+                  };
+
                   // -- Audio --
                   var last_started_audio_ts = Date.now();
 
@@ -623,16 +634,7 @@
                     if (!node.expand_enabled) {
                       return
                     }
-                    const url = `${API_BASE_URL}/api/expand/${node.id}/${node.selected_types}`
-                    console.log("Expanding from node: ", node.label);
-                    response = await fetch(url, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    const resp_body = await response.json();
-                    check_status(resp_body.task_id, 2000, 2000);
+                    expand(node);
                   });
 
                   // Click
