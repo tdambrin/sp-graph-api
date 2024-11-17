@@ -67,7 +67,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
     def current_graph_key(self):
         return self._current_graph_key
 
-    def get(self, item_id: str):
+    def get(self, item_id: str) -> SpotifyItem | None:
         return self._items.get(item_id)
 
     def get_all_items(self):

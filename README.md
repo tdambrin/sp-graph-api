@@ -1,5 +1,6 @@
 # Spotify Graph Search
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
@@ -43,13 +44,16 @@ $ make run-local
 - [x] Open spotify -> switch to shift click
 - [x] Delete node on alt click
 - [x] Interactive graph - not just player, update when (un)select types, load progressively
+
+# Version 0.4.1 - Refactor API
+- [x] Remove UI components
 - [ ] Make API multi user with sessions
 
 # Version 0.5 - UX
 - [ ] Artists connect to artists and a track is only connected to an album or artist it is part of
 - [ ] Search by popularity
   - either automatically get diverse popularity scores (i.e. if taylor then not ariana)
-  - or set popularity thresholds thresholds
+  - or set popularity thresholds
 - [ ] Export to playlist
 - [ ] Match with user's knowledge
   - flag new vs known

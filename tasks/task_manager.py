@@ -7,12 +7,12 @@ from typing import Any, Dict, List, Optional
 
 import commons
 import constants
+import networkx as nx
 from api_clients.wrappers import SpotifyWrapper
 from config import OUTPUT_DIR
 from items.item import ValidItem
 from items.store import ItemStore
 from tasks.task import Task
-from viz import GraphVisualizer
 
 
 class TaskManager:
@@ -75,11 +75,10 @@ class TaskManager:
         current_graph = ItemStore().get_graph(graph_key=graph_key)
 
         if save:
-            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-            with open(
-                OUTPUT_DIR / ("_".join([graph_key, "0", "4"]) + ".html"), "w"
-            ) as f:
-                f.write(GraphVisualizer(graph=current_graph).html_str())
+            if save:
+                OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+                filename = OUTPUT_DIR / ("_".join([graph_key, "0", "4"]) + ".gml")
+                nx.write_gml(current_graph, filename)
 
         res = {
             "nodes": commons.nodes_edges_to_list_of_dict(
@@ -137,12 +136,13 @@ class TaskManager:
             save: whether to save the html graph as a result (default false)
 
         Returns:
-            graph as html
+            nodes and edges as dict
         """
 
         store = ItemStore()
         current_graph_key = store.current_graph_key  # to make a query param
         item = store.get(item_id=node_id)
+
         if not item.expand_enabled:  # nothing to add
             return {
                 "nodes": [],
@@ -161,11 +161,8 @@ class TaskManager:
 
         if save:
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-            with open(
-                OUTPUT_DIR / ("_".join([current_graph_key, "0", "4"]) + ".html"),
-                "w",
-            ) as f:
-                f.write(GraphVisualizer(graph=current_graph).html_str())
+            filename = OUTPUT_DIR / ("_".join([current_graph_key, "0", "4"]) + ".gml")
+            nx.write_gml(current_graph, filename)
 
         return {
             "nodes": commons.nodes_edges_to_list_of_dict(

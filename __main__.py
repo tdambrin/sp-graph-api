@@ -1,7 +1,8 @@
+import json
+
 import items
 from config import OUTPUT_DIR
 from tasks import TaskManager
-from viz import GraphVisualizer
 
 selected_types = [
     items.ValidItem.TRACK.value,
@@ -13,14 +14,9 @@ keywords_ = keywords.split(" ")
 
 ctrl = TaskManager(selected_types=selected_types)
 result = ctrl.search_task(keywords=keywords_, save=True)
-filename = OUTPUT_DIR / ("_".join(["main_result", *keywords, "0", "4"]) + ".html")
+filename = OUTPUT_DIR / ("_".join(["search", *keywords, "0", "4"]) + ".json")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-with open(
-    filename,
-    "w",
-) as f:
-    f.write(
-        GraphVisualizer(nodes=result.get("nodes"), edges=result.get("edges")).html_str()
-    )
+with open(filename, "w", encoding="utf-8") as f:
+    json.dump(result, f)
 
-print(f"Saved search graph to {filename}")
+print(f"Saved search results to {filename}")

@@ -123,6 +123,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
 .venv
 env/
 venv/
@@ -165,3 +166,11 @@ cython_debug/
 conf.yml
 cache/
 testing*
+viz.py
+app.py
+web_clients
+.streamlit/
+assets/
+outputs/
+responses/
+templates/
