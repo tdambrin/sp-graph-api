@@ -1,7 +1,7 @@
 import functools
 import json
 import operator
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import items
 from commons import utils
@@ -52,9 +52,52 @@ class SpotifyWrapper:
 
         return json.load(open(PROJECT_ROOT / "responses" / name, "r"))
 
+    def find(
+        self,
+        item_id: str,
+        item_type: Union[items.ValidItem, str],
+    ) -> items.SpotifyItem:
+        """
+        Find an item from Spotify
+
+        Args:
+            item_id: id of the item looked for
+            item_type: type of the item e.g. album, artist, track
+
+        Returns:
+            instance of items.SpotifyItem subclass
+        """
+        if isinstance(item_type, str):
+            item_type = items.ValidItem(item_type)
+
+        valid_types = [
+            items.ValidItem.ALBUM.value,
+            items.ValidItem.ARTIST.value,
+            items.ValidItem.TRACK.value,
+        ]
+        if item_type.value not in valid_types:
+            raise ValueError(
+                "[Error: SpotifyWrapper.find] Item type not provided or not in "
+                f"{','.join(valid_types)}"
+            )
+
+        if item_type == items.ValidItem.ALBUM:
+            json_item = self.__client.album(album_id=item_id)
+        elif item_type == items.ValidItem.ARTIST:
+            json_item = self.__client.artist(artist_id=item_id)
+        else:  # item_type == items.ValidItem.TRACK:
+            json_item = self.__client.track(track_id=item_id)
+
+        parsed = ItemStore().parse_items_from_list(
+            dict_items=[json_item],
+            item_type=item_type,
+        )
+        return parsed[0]
+
     def search(
         self,
         keywords: List[str],
+        session_id: str,
         graph_key: str,
         restricted_types: Optional[List[str]] = None,
         max_depth: int = 2,
@@ -66,6 +109,7 @@ class SpotifyWrapper:
 
         Args:
             keywords: search keywords
+            session_id (str): user session identifier
             graph_key: key of the graph it corresponds to in the store
             restricted_types: result items type restriction. All if None.
             max_depth: recommendations start at level 2, inclusive
@@ -100,6 +144,7 @@ class SpotifyWrapper:
 
         # Parse and set results to store
         parsed_items = ItemStore().parse_items_from_api_result(
+            session_id=session_id,
             graph_key=graph_key,
             search_results=search_results,
             depth=1,
@@ -107,6 +152,7 @@ class SpotifyWrapper:
             task_id=task_id,
         )
         ItemStore().relate(
+            session_id=session_id,
             graph_key=graph_key,
             parent_id=graph_key,
             children_ids={parsed_item.id for parsed_item in parsed_items},
@@ -120,6 +166,7 @@ class SpotifyWrapper:
 
         for item in parsed_items:
             self.find_related(
+                session_id=session_id,
                 graph_key=graph_key,
                 item=item,
                 depth=2,
@@ -132,6 +179,7 @@ class SpotifyWrapper:
 
     def find_related(
         self,
+        session_id: str,
         graph_key: str,
         item: items.SpotifyItem,
         depth: int,
@@ -143,6 +191,7 @@ class SpotifyWrapper:
         """
         Find nodes related to a starting node
         Args:
+            session_id (str): user session identifier
             graph_key: to get items from store
             item: starting item to find related for
             depth: current depth
@@ -181,6 +230,7 @@ class SpotifyWrapper:
             SpotifyWrapper.cache(f"recommend_{item.id}.json", recommendation_results)
 
         parsed_items = ItemStore().parse_items_from_api_result(
+            session_id=session_id,
             graph_key=graph_key,
             search_results=recommendation_results,
             depth=depth,
@@ -188,6 +238,7 @@ class SpotifyWrapper:
             task_id=task_id,
         )
         ItemStore().relate(
+            session_id=session_id,
             graph_key=graph_key,
             parent_id=item.id,
             children_ids={parsed_item.id for parsed_item in parsed_items},
@@ -197,6 +248,7 @@ class SpotifyWrapper:
 
         for item in parsed_items:
             self.find_related(
+                session_id=session_id,
                 graph_key=graph_key,
                 item=item,
                 depth=depth + 1,

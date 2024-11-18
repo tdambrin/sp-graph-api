@@ -22,23 +22,47 @@ class TaskManager:
         ValidItem.TRACK.value,
     ]
 
-    def __init__(self, selected_types: Optional[List[str]] = None):
+    def __init__(
+        self,
+        session_id: str,
+        graph_key: Optional[str] = None,
+        selected_types: Optional[List[str]] = None,
+    ):
+        """
+        Args:
+            session_id (str): user session id
+            graph_key (str): id of the graph to focus on, optional
+            selected_types (list): to restrict result types, optional
+        """
+        self._session_id = session_id
+        self._graph_key = graph_key
         self._selected_types: List[str] = selected_types or TaskManager.ALL_TYPES
 
     def search_task(self, keywords: List[str], save: bool = False):
+        """
+        Search task, returns query node and expand in split thread
+
+        Args:
+            keywords: Search keywords
+            save: whether to write result to local fs
+
+        Returns:
+            graph summary
+        """
         task_id = str(uuid.uuid4())
-        graph_key = self._init_query_graph(keywords=keywords, task_id=task_id)
+        self._graph_key = self._init_query_graph(keywords=keywords, task_id=task_id)
         task = Task(
             target=self.expand_from_query_node,
             task_uuid=task_id,
             use_threading=True,
             keywords=keywords,
-            graph_key=graph_key,
             save=save,
             task_id=task_id,
         )
         task.run()
-        graph_ = ItemStore().get_graph(graph_key)
+        graph_ = ItemStore().get_graph(
+            session_id=self._session_id, graph_key=self._graph_key
+        )
         return {
             "task_id": task_id,
             "nodes": commons.nodes_edges_to_list_of_dict(graph_, which=constants.NODES),
@@ -50,7 +74,6 @@ class TaskManager:
     def expand_from_query_node(
         self,
         keywords: List[str],
-        graph_key: str,
         save: bool = False,
         task_id: Optional[str] = None,
     ) -> Dict[str, List[Dict[str, Any]]]:
@@ -59,25 +82,27 @@ class TaskManager:
 
         Args:
             keywords: list of keywords to search
-            graph_key: to add to the graph
             save: whether to save the graph's output as html
             task_id (str): if provided, set intermediate results to task
         """
         SpotifyWrapper().search(
             keywords=keywords,
-            graph_key=graph_key,
+            session_id=self._session_id,
+            graph_key=self._graph_key,
             max_depth=2,
             restricted_types=self._selected_types,
             set_singleton=True,
             write_cache=True,
             task_id=task_id,
         )
-        current_graph = ItemStore().get_graph(graph_key=graph_key)
+        current_graph = ItemStore().get_graph(
+            session_id=self._session_id, graph_key=self._graph_key
+        )
 
         if save:
             if save:
                 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-                filename = OUTPUT_DIR / ("_".join([graph_key, "0", "4"]) + ".gml")
+                filename = OUTPUT_DIR / ("_".join([self._graph_key, "0", "4"]) + ".gml")
                 nx.write_gml(current_graph, filename)
 
         res = {
@@ -90,19 +115,20 @@ class TaskManager:
         }
         return res
 
-    @staticmethod
-    def _init_query_graph(keywords: List[str], task_id: str) -> str:
+    def _init_query_graph(self, keywords: List[str], task_id: str) -> str:
         """
         Initialize query graph with a query node
 
         Args:
-            keywords: list of search keywords
-            task_id: search task id
+            keywords (list): list of search keywords
+            task_id (str): search task id
 
         Returns:
             graph key
         """
-        graph_key = ItemStore().set_query_node(query_kw=keywords, task_id=task_id)
+        graph_key = ItemStore().set_query_node(
+            query_kw=keywords, session_id=self._session_id, task_id=task_id
+        )
         return graph_key
 
     def start_expand_task(self, node_id: str, save: bool = False):
@@ -140,28 +166,29 @@ class TaskManager:
         """
 
         store = ItemStore()
-        current_graph_key = store.current_graph_key  # to make a query param
         item = store.get(item_id=node_id)
-
-        if not item.expand_enabled:  # nothing to add
-            return {
-                "nodes": [],
-                "edges": [],
-            }
+        if item is None:
+            item = SpotifyWrapper().find(
+                item_id=node_id,
+                item_type=ValidItem.TRACK,
+            )
 
         SpotifyWrapper().find_related(
-            graph_key=current_graph_key,
+            session_id=self._session_id,
+            graph_key=self._graph_key,
             item=item,
             depth=1,
             max_depth=1,
             restricted_types=self._selected_types,
             set_singleton=True,
         )
-        current_graph = ItemStore().get_graph(graph_key=current_graph_key)
+        current_graph = ItemStore().get_graph(
+            session_id=self._session_id, graph_key=self._graph_key
+        )
 
         if save:
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-            filename = OUTPUT_DIR / ("_".join([current_graph_key, "0", "4"]) + ".gml")
+            filename = OUTPUT_DIR / ("_".join([self._graph_key, "0", "4"]) + ".gml")
             nx.write_gml(current_graph, filename)
 
         return {

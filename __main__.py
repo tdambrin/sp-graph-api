@@ -12,7 +12,7 @@ selected_types = [
 keywords = input("Search what (space separated)")
 keywords_ = keywords.split(" ")
 
-ctrl = TaskManager(selected_types=selected_types)
+ctrl = TaskManager(session_id="my_uuid", selected_types=selected_types)
 result = ctrl.search_task(keywords=keywords_, save=True)
 filename = OUTPUT_DIR / ("_".join(["search", *keywords, "0", "4"]) + ".json")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

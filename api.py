@@ -1,47 +1,108 @@
-from typing import List
+import uuid
+from functools import reduce
+from operator import add
+from typing import Annotated, List
 
 import commons
 import config
 import constants
+from api_clients.wrappers import SpotifyWrapper
 from commons import str_to_values
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from items import ItemStore
+from pydantic import BaseModel, field_validator
 from status import StatusManager
 from tasks import TaskManager
 
 spg_api = FastAPI()
 
 origins = [
-    # "http://localhost",
-    "*",
+    "http://localhost:8080",
+    "http://localhost:8502",
+    "https://tdambrin.github.io/",
+    # "*",
 ]
 
 spg_api.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=[
+        "GET",
+    ],
     allow_headers=["*"],
 )
 
 
+# --- Sessions ---
+
+
+@spg_api.get("/api/sessions/create")
+def get_session_params():
+    return {"session_id": str(uuid.uuid4())}
+
+
+@spg_api.get("/api/sessions/restore")
+def get_session_params(
+    session_id: Annotated[str, Header()],
+):
+    graphs = ItemStore().get_graphs(session_id=session_id)
+    if not graphs:
+        return {}
+    return {
+        "graph_keys": list(graphs.keys()),
+        "nodes": reduce(
+            add,
+            [
+                commons.nodes_edges_to_list_of_dict(graph_, which=constants.NODES)
+                for graph_ in graphs.values()
+            ],
+        ),
+        "edges": reduce(
+            add,
+            [
+                commons.nodes_edges_to_list_of_dict(
+                    graph_, which=constants.EDGES, system_=constants.VIS_JS_SYS
+                )
+                for graph_ in graphs.values()
+            ],
+        ),
+    }
+
+
+# --- Graph Interactions ---
+
+
 @spg_api.get("/api/search/{keywords}/{selected_types}")
-def search(keywords: str, selected_types: str):
+def search(
+    keywords: str,
+    selected_types: str,
+    session_id: Annotated[str, Header()],
+):
     # Parse params
     keywords_: List[str] = commons.str_to_values(keywords, sep="+")
     selected_types_: List[str] = commons.str_to_values(selected_types, sep="+")
 
     # Start search
-    ctrl = TaskManager(selected_types=selected_types_)
-    return ctrl.search_task(keywords=keywords_, save=True)
+    ctrl = TaskManager(session_id=session_id, selected_types=selected_types_)
+    return ctrl.search_task(keywords=keywords_, save=False)
 
 
-@spg_api.get("/api/expand/{node_id}/{selected_types}")
-def start_expand(node_id: str, selected_types: str):
-    ctrl = TaskManager(selected_types=str_to_values(selected_types, sep="+"))
-    task_id = ctrl.start_expand_task(node_id=node_id)
+@spg_api.get("/api/expand/{graph_key}/{node_id}/")
+def start_expand(
+    graph_key: str,
+    node_id: str,
+    selected_types: str,
+    session_id: Annotated[str, Header()],
+):
+    ctrl = TaskManager(
+        session_id=session_id,
+        graph_key=graph_key,
+        selected_types=str_to_values(selected_types, sep="+"),
+    )
+    task_id = ctrl.start_expand_task(node_id=node_id, save=False)
     return {"task_id": task_id}
 
 
@@ -55,18 +116,19 @@ def get_all_tasks():
     return StatusManager().all_tasks
 
 
-@spg_api.get("/api/items")
-def get_current_items():
-    current_graph = ItemStore().get_current_graph()
-    return {
-        "nodes": commons.nodes_edges_to_list_of_dict(current_graph, constants.NODES),
-        "edges": commons.nodes_edges_to_list_of_dict(current_graph, constants.EDGES),
-    }
+@spg_api.get("/api/cache/items")
+def get_cached_items():
+    return {"items": ItemStore().get_all_items()}
 
 
-@spg_api.get("/api/nodes/{node_id}")
-def get_node(node_id: str):
-    return {"node": ItemStore().get(node_id)}
+@spg_api.get("/api/cache/items/{item_id}")
+def get_cached_item(item_id: str):
+    return {"item": ItemStore().get(item_id)}
+
+
+@spg_api.get("/api/items/{item_id}")
+def get_item_from_spotify(item_id: str, item_type: str):
+    return {"item": SpotifyWrapper().find(item_id=item_id, item_type=item_type)}
 
 
 @spg_api.get("/docs", include_in_schema=False)
@@ -84,7 +146,7 @@ if __name__ == "__main__":
 
     uvicorn.run(spg_api, host="127.0.0.1", port=8502, log_level="info")
 
-    # Thread version
+    # Thread version - not reached
     import threading
 
     threading.Thread(

@@ -52,8 +52,8 @@ endif
 
 
 set-api-in-template: check-env
-	sed -i -e "s/SPG_API_HOST/$(SPG_API_HOST)/g" templates/template.html
-	sed -i -e "s/SPG_API_PORT/$(SPG_API_PORT)/g" templates/template.html
+	sed -i '' -e "s/SPG_API_HOST/$(SPG_API_HOST)/g" templates/template.html
+	sed -i '' -e "s/SPG_API_PORT/$(SPG_API_PORT)/g" templates/template.html
 
 api:
 	uvicorn api:spg_api --host 127.0.0.1 --port 8502 --workers 1

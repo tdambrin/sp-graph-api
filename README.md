@@ -47,7 +47,7 @@ $ make run-local
 
 # Version 0.4.1 - Refactor API
 - [x] Remove UI components
-- [ ] Make API multi user with sessions
+- [x] Make API multi user with sessions
 
 # Version 0.5 - UX
 - [ ] Artists connect to artists and a track is only connected to an album or artist it is part of

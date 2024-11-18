@@ -1,3 +1,4 @@
+import uuid
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -90,7 +91,7 @@ def scale_weights(
 
 
 def nodes_edges_to_list_of_dict(
-    g: type[nx.DiGraph],
+    g: nx.DiGraph,
     which: str,
     system_: str = constants.VIS_JS_SYS,
 ) -> List[Dict[str, Any]]:
@@ -159,3 +160,20 @@ def di_graph_from_list_of_dict(
             },
         )
     return g_
+
+
+def is_uuid(candidate: str, version: int = 4) -> bool:
+    """
+    Check if candidate is uuid format string
+    Args:
+        candidate (str)
+        version (int): uuid version (default 4)
+
+    Returns:
+        (bool)
+    """
+    try:
+        uuid.UUID(candidate, version=version)
+    except ValueError:
+        return False
+    return True
