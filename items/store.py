@@ -350,6 +350,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
                 parent_id,
                 weight=self._depth_edge_weight(depth),
                 id=f"{parent_id}_{child_id}",
+                unordered_id=commons.commutative_hash(parent_id, child_id),
             )
 
         if task_id is not None:

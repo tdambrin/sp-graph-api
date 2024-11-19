@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 from copy import deepcopy
 from pathlib import Path
@@ -162,18 +163,31 @@ def di_graph_from_list_of_dict(
     return g_
 
 
-def is_uuid(candidate: str, version: int = 4) -> bool:
+def is_uuid(candidate: str) -> bool:
     """
     Check if candidate is uuid format string
     Args:
         candidate (str)
-        version (int): uuid version (default 4)
 
     Returns:
         (bool)
     """
     try:
-        uuid.UUID(candidate, version=version)
+        uuid.UUID(candidate)
     except ValueError:
         return False
     return True
+
+
+def commutative_hash(*args):
+    """
+    Hash function for list of strings where order of letter/words doesn't matter
+    Higher collision proba as f('ab', 'ba') == f('aabb')
+    Args:
+        *args: list of strings
+
+    Returns:
+        hash of ordered join of all letters (with duplicates)
+    """
+    ordered_ = "".join(sorted(list("".join(args))))
+    return hashlib.shake_128(ordered_.encode("utf-8")).hexdigest(4)

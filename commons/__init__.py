@@ -1,5 +1,6 @@
 from .metaclasses import ThreadSafeSingleton
 from .utils import (
+    commutative_hash,
     di_graph_from_list_of_dict,
     dict_extend,
     is_uuid,
