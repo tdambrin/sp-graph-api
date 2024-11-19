@@ -127,7 +127,10 @@ class TaskManager:
             graph key
         """
         graph_key = ItemStore().set_query_node(
-            query_kw=keywords, session_id=self._session_id, task_id=task_id
+            query_kw=keywords,
+            session_id=self._session_id,
+            task_id=task_id,
+            override=True,
         )
         return graph_key
 

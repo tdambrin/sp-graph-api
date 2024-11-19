@@ -163,20 +163,25 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             # font="10px arial white",
         )
 
-    def set_query_node(self, session_id: str, query_kw: List[str], task_id: str) -> str:
+    def set_query_node(
+        self, session_id: str, query_kw: List[str], task_id: str, override: bool = False
+    ) -> str:
         """
         Set graph central query node
         Args:
             session_id (str): user session identifier
             query_kw: keywords used for the search
             task_id: task id corresponding to the search
+            override (bool): whether to override if graph already exists
 
         Returns:
             Graph key
         """
         query_key = ItemStore.graph_key_from_keywords(query_kw)
         if self._graphs.get(session_id, {}).get(query_key):
-            return query_key
+            if not override:
+                return query_key
+            self._graphs[session_id][query_key] = nx.DiGraph()
         self.init_graph(session_id=session_id, graph_key=query_key)
         self._graphs[session_id][query_key].add_node(
             query_key,
