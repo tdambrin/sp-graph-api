@@ -11,15 +11,19 @@ from commons import str_to_values
 from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import JSONResponse
 from items import ItemStore
-from pydantic import BaseModel, field_validator
 from status import StatusManager
 from tasks import TaskManager
 
-spg_api = FastAPI()
+spg_api = FastAPI(
+    title="Spotify Graph API",
+    default_response_class=JSONResponse,
+)
 
 origins = [
     "http://localhost:8080",
+    "http://192.168.1.155:8080",
     "http://localhost:8502",
     "https://tdambrin.github.io/",
     # "*",
@@ -75,7 +79,7 @@ def get_session_params(
 # --- Graph Interactions ---
 
 
-@spg_api.get("/api/search/{keywords}/{selected_types}")
+@spg_api.get("/api/search/{keywords}")
 def search(
     keywords: str,
     selected_types: str,
@@ -90,7 +94,7 @@ def search(
     return ctrl.search_task(keywords=keywords_, save=False)
 
 
-@spg_api.get("/api/expand/{graph_key}/{node_id}/")
+@spg_api.get("/api/expand/{graph_key}/{node_id}")
 def start_expand(
     graph_key: str,
     node_id: str,
