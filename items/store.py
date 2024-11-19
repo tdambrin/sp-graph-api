@@ -159,6 +159,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             expand_enabled=item.expand_enabled,
             selected_types=commons.values_to_str(selected_types, sep="+"),
             graph_key=graph_key,
+            node_type=item.type.value,
             **optional_kwargs,
             # font="10px arial white",
         )
@@ -193,6 +194,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             href=f"https://open.spotify.com/search/{'%20'.join(query_kw)}",
             task_id=task_id,
             graph_key=query_key,
+            node_type="query",
         )
         return query_key
 

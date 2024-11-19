@@ -134,11 +134,14 @@ class TaskManager:
         )
         return graph_key
 
-    def start_expand_task(self, node_id: str, save: bool = False):
+    def start_expand_task(
+        self, node_id: str, item_type: str = None, save: bool = False
+    ):
         """
         Start the task in a thread and return task id
         Args:
             node_id: node from which to expand
+            item_type: to retrieve from spotify if not in cache
             save: whether to save the html graph as a result (default false)
 
         Returns:
@@ -150,18 +153,20 @@ class TaskManager:
             task_uuid=task_id,
             use_threading=True,
             node_id=node_id,
+            item_type=item_type,
             save=save,
         )
         task.run()
         return task_id
 
     def expand_from_node(
-        self, node_id: str, save: bool = False
+        self, node_id: str, item_type: str = None, save: bool = False
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Expand the graph from one node
         Args:
             node_id: node from which to expand
+            item_type: to retrieve from spotify if not in cache
             save: whether to save the html graph as a result (default false)
 
         Returns:
@@ -171,9 +176,19 @@ class TaskManager:
         store = ItemStore()
         item = store.get(item_id=node_id)
         if item is None:
+            if item_type is None or item_type not in [
+                valid_.value for valid_ in ValidItem
+            ]:
+                raise ValueError(
+                    f"""
+                    [task_manager.expand_from_node] item {node_id} not in cache and
+                    item type {item_type or 'None'} is invalid.
+                    """
+                )
+
             item = SpotifyWrapper().find(
                 item_id=node_id,
-                item_type=ValidItem.TRACK,
+                item_type=ValidItem(item_type),
             )
 
         SpotifyWrapper().find_related(
