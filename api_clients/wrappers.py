@@ -27,7 +27,15 @@ class SpotifyWrapper:
         ]
 
     @property
-    def type_rec_weight(self):
+    def backbone_priorities(self) -> Dict[str, int]:
+        return {
+            items.ValidItem.ARTIST.value: 1,
+            items.ValidItem.ALBUM.value: 2,
+            items.ValidItem.TRACK.value: 3,
+        }
+
+    @property
+    def type_rec_weight(self) -> Dict[str, int]:
         """Recommendation weight for each type when several possible"""
         return {
             items.ValidItem.ALBUM.value: 1,
@@ -51,6 +59,24 @@ class SpotifyWrapper:
         from config import PROJECT_ROOT
 
         return json.load(open(PROJECT_ROOT / "responses" / name, "r"))
+
+    # -- Helpers --
+
+    def get_backbone_type(self, restricted_types: List[str]) -> str:
+        """
+        Get backbone type out of list of restricted types
+        Args:
+            restricted_types (List[str]): values from self.all_types
+
+        Returns:
+            selected backbone type, one of restricted_types
+        """
+        candidates = sorted(
+            restricted_types, key=lambda type_: self.backbone_priorities[type_]
+        )
+        return next(iter(candidates))
+
+    # -- Spotify methods --
 
     def find(
         self,
@@ -106,6 +132,9 @@ class SpotifyWrapper:
     ) -> str:
         """
         Search from keywords and recursive recommendation. Add results to items.ItemStore
+        Adding to the store will form a graph whose structure is a backbone of a single type
+        and stars of the other types.
+        Backbone types priorities are the order of self.all_types
 
         Args:
             keywords: search keywords
@@ -119,17 +148,19 @@ class SpotifyWrapper:
             id of the graph
         """
         restricted_types = restricted_types or self.all_types
-        if restricted_types and set(restricted_types) - set(self.all_types):
-            raise ValueError(
-                "[Error: SpotifyWrapper.search] "
-                f"restricted_types={','.join(restricted_types)} contains illegal values."
-                f"Accepted values are {','.join(self.all_types)}"
-            )
+
+        assert len(set(restricted_types) - set(self.all_types)) == 0, (
+            "[Error: SpotifyWrapper.search] "
+            f"restricted_types={','.join(restricted_types)} contains illegal values."
+            f"Accepted values are {','.join(self.all_types)}"
+        )
+
+        backbone_type = self.get_backbone_type(restricted_types=restricted_types)
 
         # Get spotify results
         query_params = self.__build_search_query(
             keywords=keywords,
-            restricted_types=restricted_types,
+            restricted_types=[backbone_type],
         )
 
         if kwargs.get("read_cache"):
@@ -171,7 +202,8 @@ class SpotifyWrapper:
                 item=item,
                 depth=2,
                 max_depth=max_depth,
-                restricted_types=restricted_types,
+                backbone_type=backbone_type,
+                star_types=restricted_types,
                 task_id=task_id,
                 **kwargs,
             )
@@ -184,7 +216,8 @@ class SpotifyWrapper:
         item: items.SpotifyItem,
         depth: int,
         max_depth: int,
-        restricted_types: List[str],
+        backbone_type: str,
+        star_types: List[str],
         task_id: Optional[str] = None,
         **kwargs,
     ):
@@ -196,7 +229,8 @@ class SpotifyWrapper:
             item: starting item to find related for
             depth: current depth
             max_depth: maximum depth allowed, inclusive
-            restricted_types: level result item type restriction. All if None.
+            backbone_type (str): item type of the backbone
+            star_types (List[str)]: types of the star nodes
             task_id (str): if provided, set intermediate results to task
             **kwargs:
 
@@ -206,54 +240,94 @@ class SpotifyWrapper:
         if depth > max_depth:
             return
 
-        relative_rec_weights = [
-            self.type_rec_weight[_type] for _type in restricted_types
-        ]
-        scaled_rec_weights = {
-            _type: scaled_weight
-            for _type, scaled_weight in zip(
-                restricted_types,
-                utils.scale_weights(relative_rec_weights, SpotifyWrapper.REC_SIZE),
-            )
-        }
+        assert backbone_type in self.all_types, (
+            "[Error: SpotifyWrapper.find_related] "
+            f"Illegal value for backbone type : {backbone_type}. "
+            f"Accepted values are {','.join(self.all_types)}"
+        )
 
-        if kwargs.get("read_cache"):
-            recommendation_results = SpotifyWrapper.read_cache(
-                f"recommend_{item.id}.json"
-            )
-        else:
-            recommendation_results = self.recommend_from_item(
-                item=item, limit_per_type=scaled_rec_weights
-            )
-
-        if kwargs.get("write_cache"):
-            SpotifyWrapper.cache(f"recommend_{item.id}.json", recommendation_results)
-
-        parsed_items = ItemStore().parse_items_from_api_result(
+        # Get backbone extension first
+        backbone_extension_result = self.recommend_from_item(
+            item=item, limit_per_type={backbone_type: 1}
+        )
+        backbone_extensions = ItemStore().parse_items_from_api_result(
             session_id=session_id,
             graph_key=graph_key,
-            search_results=recommendation_results,
+            search_results=backbone_extension_result,
             depth=depth,
-            selected_types=restricted_types,
+            selected_types=[backbone_type],
             task_id=task_id,
         )
+        assert len(backbone_extensions) <= 1, (
+            "[Error: SpotifyWrapper.find_related] "
+            f"Backbone extensions larger than 1: {backbone_extensions}"
+            f"From item {item}, limit per type = {backbone_type}: 1"
+        )
+
         ItemStore().relate(
             session_id=session_id,
             graph_key=graph_key,
             parent_id=item.id,
-            children_ids={parsed_item.id for parsed_item in parsed_items},
+            children_ids={parsed_item.id for parsed_item in backbone_extensions},
             depth=depth,
             task_id=task_id,
         )
 
-        for item in parsed_items:
+        if backbone_extensions:  # bfs
             self.find_related(
                 session_id=session_id,
                 graph_key=graph_key,
-                item=item,
+                item=backbone_extensions[0],
                 depth=depth + 1,
                 max_depth=max_depth,
-                restricted_types=restricted_types,
+                backbone_type=backbone_type,
+                star_types=star_types,
+                task_id=task_id,
+            )
+
+        # Then get star
+        # make sure backbone type not in star types
+        star_types = [type_ for type_ in star_types if type_ != backbone_type]
+
+        if star_types:  # If no start type, no star
+            relative_rec_weights = [self.type_rec_weight[_type] for _type in star_types]
+            scaled_rec_weights = {
+                _type: scaled_weight
+                for _type, scaled_weight in zip(
+                    star_types,
+                    utils.scale_weights(relative_rec_weights, SpotifyWrapper.REC_SIZE),
+                )
+            }
+
+            if kwargs.get("read_cache"):
+                recommendation_results = SpotifyWrapper.read_cache(
+                    f"recommend_{item.id}.json"
+                )
+            else:
+                recommendation_results = self.recommend_from_item(
+                    item=item, limit_per_type=scaled_rec_weights
+                )
+
+            if kwargs.get("write_cache"):
+                SpotifyWrapper.cache(
+                    f"recommend_{item.id}.json", recommendation_results
+                )
+
+            star_items = ItemStore().parse_items_from_api_result(
+                session_id=session_id,
+                graph_key=graph_key,
+                search_results=recommendation_results,
+                depth=depth,
+                selected_types=star_types,
+                task_id=task_id,
+            )
+
+            ItemStore().relate(
+                session_id=session_id,
+                graph_key=graph_key,
+                parent_id=item.id,
+                children_ids={parsed_item.id for parsed_item in star_items},
+                depth=depth,
                 task_id=task_id,
             )
 

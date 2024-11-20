@@ -89,7 +89,7 @@ class TaskManager:
             keywords=keywords,
             session_id=self._session_id,
             graph_key=self._graph_key,
-            max_depth=2,
+            max_depth=3,
             restricted_types=self._selected_types,
             set_singleton=True,
             write_cache=True,
@@ -197,7 +197,8 @@ class TaskManager:
             item=item,
             depth=1,
             max_depth=1,
-            restricted_types=self._selected_types,
+            backbone_type=SpotifyWrapper().get_backbone_type(self._selected_types),
+            star_types=self._selected_types,
             set_singleton=True,
         )
         current_graph = ItemStore().get_graph(
