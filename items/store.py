@@ -65,18 +65,18 @@ class ItemStore(metaclass=ThreadSafeSingleton):
     @staticmethod
     def _depth_node_size(depth: int):
         if depth <= 1:
-            return 30
+            return 50
         if depth == 2:
-            return 20
-        return 10
+            return 30
+        return 20
 
     @staticmethod
-    def _depth_edge_weight(depth: int):
+    def _depth_edge_width(depth: int):
         if depth <= 1:
-            return 12
+            return 10
         if depth == 2:
-            return 6
-        return 1
+            return 7
+        return 4
 
     @staticmethod
     def graph_key_from_keywords(keywords: List[str]):
@@ -333,6 +333,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         children_ids: Set[str],
         depth: int,
         task_id: Optional[str] = None,
+        **kwargs,
     ):
         """
         Add edges between result/query nodes
@@ -350,9 +351,10 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             self._graphs[session_id][graph_key].add_edge(
                 child_id,
                 parent_id,
-                weight=self._depth_edge_weight(depth),
+                width=self._depth_edge_width(depth),
                 id=f"{parent_id}_{child_id}",
                 unordered_id=commons.commutative_hash(parent_id, child_id),
+                **kwargs,
             )
 
         if task_id is not None:
