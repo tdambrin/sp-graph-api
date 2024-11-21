@@ -7,13 +7,17 @@ from dotenv import dotenv_values
 
 # --- Env vars ---
 
-env_flag_idx = next((i for i, x in enumerate(sys.argv) if x in ["-e", "--env"]), None)
+env_flag_idx = next(
+    (i for i, x in enumerate(sys.argv) if x in ["-e", "--env"]), None
+)
 if (
     env_flag_idx is not None and len(sys.argv) > env_flag_idx + 1
 ):  # flag is there and env follows
     env_name = sys.argv[env_flag_idx + 1]  # env follows flag
     if env_name != "local":
-        raise ValueError(f"[config] {env_name} is not a valid .env file extension")
+        raise ValueError(
+            f"[config] {env_name} is not a valid .env file extension"
+        )
     dotenv_path = Path(f".env.{env_name}")  # local
 else:
     dotenv_path = Path(f".env")  # prod
@@ -40,3 +44,4 @@ class NodeColor(Enum):
     PRIMARY = "#1ed760"
     SECONDARY = "#b1e6c4"
     TERTIARY = "#dddddd"
+    BACKBONE = "#dddddd"

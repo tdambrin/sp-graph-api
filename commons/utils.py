@@ -1,13 +1,20 @@
 import hashlib
+import random
 import uuid
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import constants
+import matplotlib.colors as mcolors
 import networkx as nx  # type: ignore
 import numpy as np
 import yaml
+
+
+def random_color_generator():
+    color = random.choice(list(mcolors.CSS4_COLORS.values())).lower()
+    return color
 
 
 def load_from_yml(path: Union[str, Path]) -> Dict[str, Any]:
@@ -69,7 +76,9 @@ def scale_weights(
     n = len(relative_weights)
     res = [1] * n if include_all else [0] * n
     remaining = (
-        [w - 1 for w in relative_weights] if include_all else relative_weights.copy()
+        [w - 1 for w in relative_weights]
+        if include_all
+        else relative_weights.copy()
     )
     used = n if include_all else 0
     _next = np.argmax(remaining)
@@ -84,7 +93,9 @@ def scale_weights(
             sum(weights)
             for weights in zip(
                 res,
-                scale_weights(relative_weights, target_sum - used, include_all=False),
+                scale_weights(
+                    relative_weights, target_sum - used, include_all=False
+                ),
             )
         ]
 

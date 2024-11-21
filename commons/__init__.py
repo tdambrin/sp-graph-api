@@ -6,6 +6,7 @@ from .utils import (
     is_uuid,
     load_from_yml,
     nodes_edges_to_list_of_dict,
+    random_color_generator,
     str_to_values,
     values_to_str,
 )

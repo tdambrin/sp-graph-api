@@ -3,6 +3,8 @@ import json
 import operator
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import commons
+import config
 import items
 from commons import utils
 from items import ItemStore
@@ -155,7 +157,9 @@ class SpotifyWrapper:
             f"Accepted values are {','.join(self.all_types)}"
         )
 
-        backbone_type = self.get_backbone_type(restricted_types=restricted_types)
+        backbone_type = self.get_backbone_type(
+            restricted_types=restricted_types
+        )
 
         # Get spotify results
         query_params = self.__build_search_query(
@@ -171,7 +175,9 @@ class SpotifyWrapper:
             search_results = self.__client.search(**query_params)
 
         if kwargs.get("write_cache"):
-            SpotifyWrapper.cache(f"search_{graph_key.lower()}.json", search_results)
+            SpotifyWrapper.cache(
+                f"search_{graph_key.lower()}.json", search_results
+            )
 
         # Parse and set results to store
         parsed_items = ItemStore().parse_items_from_api_result(
@@ -181,7 +187,24 @@ class SpotifyWrapper:
             depth=1,
             selected_types=restricted_types,
             task_id=task_id,
+            is_backbone=True,
         )
+
+        # Expand search
+        if max_depth >= 1:
+            for item in parsed_items:
+                self.find_related(
+                    session_id=session_id,
+                    graph_key=graph_key,
+                    item=item,
+                    depth=2,
+                    max_depth=max_depth,
+                    backbone_type=backbone_type,
+                    star_types=restricted_types,
+                    task_id=task_id,
+                    **kwargs,
+                )
+
         ItemStore().relate(
             session_id=session_id,
             graph_key=graph_key,
@@ -189,24 +212,10 @@ class SpotifyWrapper:
             children_ids={parsed_item.id for parsed_item in parsed_items},
             depth=1,
             task_id=task_id,
+            is_backbone=True,
+            color=config.NodeColor.BACKBONE,
         )
 
-        # Expand search
-        if max_depth <= 1:
-            return graph_key
-
-        for item in parsed_items:
-            self.find_related(
-                session_id=session_id,
-                graph_key=graph_key,
-                item=item,
-                depth=2,
-                max_depth=max_depth,
-                backbone_type=backbone_type,
-                star_types=restricted_types,
-                task_id=task_id,
-                **kwargs,
-            )
         return graph_key
 
     def find_related(
@@ -257,20 +266,12 @@ class SpotifyWrapper:
             depth=depth,
             selected_types=[backbone_type],
             task_id=task_id,
+            is_backbone=True,
         )
         assert len(backbone_extensions) <= 1, (
             "[Error: SpotifyWrapper.find_related] "
             f"Backbone extensions larger than 1: {backbone_extensions}"
             f"From item {item}, limit per type = {backbone_type}: 1"
-        )
-
-        ItemStore().relate(
-            session_id=session_id,
-            graph_key=graph_key,
-            parent_id=item.id,
-            children_ids={parsed_item.id for parsed_item in backbone_extensions},
-            depth=depth,
-            task_id=task_id,
         )
 
         if backbone_extensions:  # bfs
@@ -283,6 +284,7 @@ class SpotifyWrapper:
                 backbone_type=backbone_type,
                 star_types=star_types,
                 task_id=task_id,
+                color=config.NodeColor.BACKBONE,
             )
 
         # Then get star
@@ -290,12 +292,16 @@ class SpotifyWrapper:
         star_types = [type_ for type_ in star_types if type_ != backbone_type]
 
         if star_types:  # If no start type, no star
-            relative_rec_weights = [self.type_rec_weight[_type] for _type in star_types]
+            relative_rec_weights = [
+                self.type_rec_weight[_type] for _type in star_types
+            ]
             scaled_rec_weights = {
                 _type: scaled_weight
                 for _type, scaled_weight in zip(
                     star_types,
-                    utils.scale_weights(relative_rec_weights, SpotifyWrapper.REC_SIZE),
+                    utils.scale_weights(
+                        relative_rec_weights, SpotifyWrapper.REC_SIZE
+                    ),
                 )
             }
 
@@ -313,13 +319,19 @@ class SpotifyWrapper:
                     f"recommend_{item.id}.json", recommendation_results
                 )
 
+            # For styling - new group
+            random_color = commons.random_color_generator()
+
+            # Parse and add to store
             star_items = ItemStore().parse_items_from_api_result(
                 session_id=session_id,
                 graph_key=graph_key,
                 search_results=recommendation_results,
-                depth=depth,
+                depth=depth + 2,
                 selected_types=star_types,
                 task_id=task_id,
+                is_backbone=False,
+                color=random_color,
             )
 
             ItemStore().relate(
@@ -329,7 +341,22 @@ class SpotifyWrapper:
                 children_ids={parsed_item.id for parsed_item in star_items},
                 depth=depth,
                 task_id=task_id,
+                color=config.NodeColor.BACKBONE,
+                hidden=True,
+                is_backbone=False,
             )
+
+        ItemStore().relate(
+            session_id=session_id,
+            graph_key=graph_key,
+            parent_id=item.id,
+            children_ids={
+                parsed_item.id for parsed_item in backbone_extensions
+            },
+            depth=depth,
+            task_id=task_id,
+            is_backbone=False,
+        )
 
     def recommend_from_item(
         self,
@@ -383,7 +410,9 @@ class SpotifyWrapper:
                 )
             all_results = utils.dict_extend(
                 all_results,
-                self._related_artists(artists_ids=tuple(artist_ids), limit=limit),
+                self._related_artists(
+                    artists_ids=tuple(artist_ids), limit=limit
+                ),
             )
         return all_results
 
@@ -394,9 +423,9 @@ class SpotifyWrapper:
         all_related = functools.reduce(
             operator.add,
             [
-                self.__client.artist_related_artists(artist_id=artists_id, **kwargs)[
-                    "artists"
-                ]
+                self.__client.artist_related_artists(
+                    artist_id=artists_id, **kwargs
+                )["artists"]
                 for artists_id in artists_ids
             ],
         )
@@ -448,9 +477,13 @@ class SpotifyWrapper:
         **kwargs,
     ) -> Dict[str, Any]:
         return self.__client.recommendations(
-            seed_artists=([a.id for a in seed_artists][:5] if seed_artists else None),
+            seed_artists=(
+                [a.id for a in seed_artists][:5] if seed_artists else None
+            ),
             seed_genres=seed_genres[:5] if seed_genres else None,
-            seed_tracks=([t.id for t in seed_tracks][:5] if seed_tracks else None),
+            seed_tracks=(
+                [t.id for t in seed_tracks][:5] if seed_tracks else None
+            ),
             limit=limit,
             **kwargs,
         )
