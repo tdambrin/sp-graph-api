@@ -51,13 +51,18 @@ $ make run-local
 - [x] Fix node retrieval when not in memory for all types
 
 # Version 0.5 - UX
-- [ ] Artists connect to artists and a track is only connected to an album or artist it is part of
+- [x] Artists connect to artists
+- [ ] A track is only connected to an album or artist it is part of
 - [ ] Search by popularity
   - either automatically get diverse popularity scores (i.e. if taylor then not ariana)
   - or set popularity thresholds
 - [ ] Export to playlist
 - [ ] Match with user's knowledge
   - flag new vs known
+- [x] Transparent edges on stars
+- [x] Fix backbone transparent from track -> done in frontend
+- [x] Random color for star groups
+- [ ] node size linear to popularity
 
 # Version 0.6 - Enable graph ops
 - [ ] Add visual directions to edges and semantic labels to edges (TRACK_OF, SIMILAR_TO, ALBUM_OF, AUTHOR_OF)
