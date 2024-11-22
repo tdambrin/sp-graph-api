@@ -135,6 +135,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         item: SpotifyItem,
         selected_types: List[str],
         depth: int = 3,
+        color: str = None,
         **kwargs,
     ):
         """
@@ -146,6 +147,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             item (items.SpotifyItem): parsed item
             selected_types (list): item types to add to node
             depth (int): for size styling
+            color (str): node color, if None will be item.node_color
         """
 
         # Because Vis JS error if present
@@ -153,18 +155,13 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         if item.images:
             optional_kwargs["image"] = item.images[0]["url"]
 
-        # Avoid multiple keys for color
-        color = kwargs.get("color") or item.node_color
-        if "color" in kwargs:
-            del kwargs["color"]
-
         # Add node to graph
         self._graphs[session_id][graph_key].add_node(
             item.id,
             label=item.name,
             title=item.title,
             size=self._depth_node_size(depth),
-            color=color,
+            color=color or item.node_color,
             shape="dot" if not item.images else "circularImage",
             href=item.external_urls.get("spotify", "_blank"),
             preview_url=item.preview_url if isinstance(item, Track) else None,
@@ -206,7 +203,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             query_key,
             label=commons.values_to_str(query_kw, sep=" "),
             title="Query",
-            size=60,
+            size=50,
             color=config.NodeColor.PRIMARY.value,
             shape="circle",
             href=f"https://open.spotify.com/search/{'%20'.join(query_kw)}",
