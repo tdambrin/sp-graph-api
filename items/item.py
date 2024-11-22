@@ -37,6 +37,7 @@ class SpotifyItem(BaseModel):
     external_urls: Dict[str, str]
     images: Optional[List[Dict[str, Any]]] = None
     expand_enabled: bool = True
+    popularity: int = None
 
     def __hash__(self):
         return self.id.__hash__()

@@ -40,6 +40,11 @@ PROJECT_ROOT = Path(__file__).parent
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
 
 
+# --- Styling ---
+
+EDGE_WIDTH = 10
+
+
 class NodeColor(Enum):
     PRIMARY = "#1ed760"
     SECONDARY = "#b1e6c4"

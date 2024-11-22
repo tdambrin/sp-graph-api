@@ -62,7 +62,7 @@ $ make run-local
 - [x] Transparent edges on stars
 - [x] Fix backbone transparent from track -> done in frontend
 - [x] Random color for star groups
-- [ ] Node size linear to popularity
+- [x] Node size linear to popularity
 - [ ] Prune graph with depth on delete
 
 # Version 0.6 - Enable graph ops

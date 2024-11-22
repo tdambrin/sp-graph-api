@@ -71,12 +71,10 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         return 20
 
     @staticmethod
-    def _depth_edge_width(depth: int):
-        if depth <= 1:
+    def _popularity_node_size(popularity: int = None):
+        if popularity is None or popularity <= 20:
             return 10
-        if depth == 2:
-            return 7
-        return 4
+        return int(popularity / 2)
 
     @staticmethod
     def graph_key_from_keywords(keywords: List[str]):
@@ -160,7 +158,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             item.id,
             label=item.name,
             title=item.title,
-            size=self._depth_node_size(depth),
+            size=self._popularity_node_size(item.popularity),
             color=color or item.node_color,
             shape="dot" if not item.images else "circularImage",
             href=item.external_urls.get("spotify", "_blank"),
@@ -169,6 +167,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             selected_types=commons.values_to_str(selected_types, sep="+"),
             graph_key=graph_key,
             node_type=item.type.value,
+            depth=depth,
             **optional_kwargs,
             **kwargs,
             # font="10px arial white",
@@ -382,7 +381,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             self._graphs[session_id][graph_key].add_edge(
                 child_id,
                 parent_id,
-                width=self._depth_edge_width(depth),
+                width=config.EDGE_WIDTH,
                 id=f"{parent_id}_{child_id}",
                 unordered_id=commons.commutative_hash(parent_id, child_id),
                 **kwargs,
