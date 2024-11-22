@@ -59,6 +59,9 @@ class SpotifyItem(BaseModel):
     def title(self) -> str:
         raise NotImplementedError
 
+    def get_artists_ids(self) -> Optional[List[str]]:
+        return
+
 
 class Artist(SpotifyItem):
     genres: Optional[List[str]] = None
@@ -93,6 +96,9 @@ class Artist(SpotifyItem):
     def title(self) -> str:
         return f"Artist - {self.name}"
 
+    def get_artists_ids(self) -> Optional[List[str]]:
+        return [self.id]
+
 
 class Album(SpotifyItem):
     release_date: str
@@ -113,6 +119,9 @@ class Album(SpotifyItem):
     def title(self) -> str:
         return f"Album - {self.name}\n" f"released on {self.release_date}"
 
+    def get_artists_ids(self) -> Optional[List[str]]:
+        return [a.id for a in self.artists]
+
 
 class Playlist(SpotifyItem):
     description: str
@@ -121,7 +130,9 @@ class Playlist(SpotifyItem):
     @cached_property
     @property
     def genres(self):
-        api_result = spotify_client.playlist_items(self.id)["tracks"].get("items")
+        api_result = spotify_client.playlist_items(self.id)["tracks"].get(
+            "items"
+        )
         # from config import PROJECT_ROOT
         # import json
         # with open(PROJECT_ROOT / "responses" / f"playlist_items_{self.id}", "w") as f:
@@ -159,9 +170,7 @@ class Track(SpotifyItem):
         # album_rec_query = self.album.recommendation_query() if self.album else {}
         # artist_rec_queries = dict_extend(*[a.recommendation_query() for a in self.artists])
         seed_tracks = {"seed_tracks": tuple([self])}
-        return (
-            seed_tracks  # dict_extend(album_rec_query, artist_rec_queries, seed_tracks)
-        )
+        return seed_tracks  # dict_extend(album_rec_query, artist_rec_queries, seed_tracks)
 
     @property
     def node_color(self) -> str:
@@ -169,4 +178,10 @@ class Track(SpotifyItem):
 
     @property
     def title(self) -> str:
-        return f"Track - {self.name}\n" f"by {','.join([a.name for a in self.artists])}"
+        return (
+            f"Track - {self.name}\n"
+            f"by {','.join([a.name for a in self.artists])}"
+        )
+
+    def get_artists_ids(self) -> Optional[List[str]]:
+        return [a.id for a in self.artists]

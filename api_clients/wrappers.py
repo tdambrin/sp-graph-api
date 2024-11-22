@@ -356,6 +356,7 @@ class SpotifyWrapper:
             depth=depth,
             task_id=task_id,
             is_backbone=False,
+            color=config.NodeColor.BACKBONE,
         )
 
     def recommend_from_item(
@@ -372,11 +373,23 @@ class SpotifyWrapper:
         """
         all_results: Dict[str, Any] = {}
         if limit := limit_per_type.get(items.ValidItem.TRACK.value):
+            item_artists_ids = item.get_artists_ids()
+            # n_same_artist = ceil(limit / 2) if item_artists_ids else 0
+            n_same_artist = limit
+            if n_same_artist > 0:
+                all_results = utils.dict_extend(
+                    all_results,
+                    self._tracks_from_artists(
+                        artists_ids=tuple(item_artists_ids),
+                        limit=n_same_artist,
+                    ),
+                )
+            n_other_artists = limit - n_same_artist
             all_results = utils.dict_extend(
                 all_results,
                 self._recommend_track(
                     **item.recommendation_query,
-                    limit=limit,
+                    limit=n_other_artists,
                     **kwargs,
                 ),
             )
@@ -420,6 +433,9 @@ class SpotifyWrapper:
     def _related_artists(
         self, artists_ids: Tuple[str], limit: int = 5, **kwargs
     ) -> Dict[str, Any]:
+        if limit <= 0:
+            return {}
+
         all_related = functools.reduce(
             operator.add,
             [
@@ -439,6 +455,9 @@ class SpotifyWrapper:
     def _artists_albums(
         self, artists_ids: Tuple[str], limit: int = 5, **kwargs
     ) -> Dict[str, Any]:
+        if limit <= 0:
+            return {}
+
         limit_per_artist = utils.scale_weights(
             [1] * min(len(artists_ids), limit), limit
         )
@@ -468,6 +487,39 @@ class SpotifyWrapper:
         }
 
     @functools.cache
+    def _tracks_from_artists(
+        self, artists_ids: Tuple[str], limit: int = 5, **kwargs
+    ) -> Dict[str, Any]:
+        if limit <= 0:
+            return {}
+
+        limit_per_artist = utils.scale_weights(
+            [1] * min(len(artists_ids), limit), limit
+        )
+        limit_per_artist = {
+            artist_id: limit_for_artist
+            for artist_id, limit_for_artist in zip(
+                artists_ids,
+                limit_per_artist,
+            )
+        }
+        all_tracks = functools.reduce(
+            operator.add,
+            [
+                self.__client.artist_top_tracks(
+                    artist_id=artists_id,
+                    **kwargs,
+                )["tracks"][:limit_for_artist]
+                for artists_id, limit_for_artist in limit_per_artist.items()
+            ],
+        )
+        return {
+            "tracks": list(
+                {t["id"]: t for t in all_tracks}.values()
+            )  # removed duplicates
+        }
+
+    @functools.cache
     def _recommend_track(
         self,
         seed_artists: Optional[Tuple[items.Artist]] = None,
@@ -476,6 +528,9 @@ class SpotifyWrapper:
         limit: int = 5,
         **kwargs,
     ) -> Dict[str, Any]:
+        if limit <= 0:
+            return {}
+
         return self.__client.recommendations(
             seed_artists=(
                 [a.id for a in seed_artists][:5] if seed_artists else None

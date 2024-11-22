@@ -52,7 +52,7 @@ $ make run-local
 
 # Version 0.5 - UX
 - [x] Artists connect to artists
-- [ ] A track is only connected to an album or artist it is part of
+- [x] A track is only connected to an album or artist it is part of
 - [ ] Search by popularity
   - either automatically get diverse popularity scores (i.e. if taylor then not ariana)
   - or set popularity thresholds
@@ -62,7 +62,7 @@ $ make run-local
 - [x] Transparent edges on stars
 - [x] Fix backbone transparent from track -> done in frontend
 - [x] Random color for star groups
-- [ ] node size linear to popularity
+- [ ] Node size linear to popularity
 - [ ] Prune graph with depth on delete
 
 # Version 0.6 - Enable graph ops

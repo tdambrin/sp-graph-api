@@ -206,7 +206,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             query_key,
             label=commons.values_to_str(query_kw, sep=" "),
             title="Query",
-            size=30,
+            size=60,
             color=config.NodeColor.PRIMARY.value,
             shape="circle",
             href=f"https://open.spotify.com/search/{'%20'.join(query_kw)}",
@@ -395,6 +395,25 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             self.__add_nodes_edges_to_task(
                 session_id=session_id, graph_key=graph_key, task_id=task_id
             )
+
+    def get_successors(self, session_id: str, graph_key: str, node_id: str):
+        """
+        Get successors of a node in the directed graph
+
+        Args:
+            session_id (str): user session identifier
+            graph_key (str): id of the graph to relate item in
+            node_id (str): node identifier
+        """
+        if (
+            node := self._graphs.get(session_id, {})
+            .get(graph_key, {})
+            .get(node_id)
+        ) is None:
+            return []
+        return [
+            n for n in self._graphs[session_id][graph_key].successors(node)
+        ]
 
     def __add_nodes_edges_to_task(
         self, session_id: str, graph_key: str, task_id: str
