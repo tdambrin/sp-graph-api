@@ -36,7 +36,9 @@ class TaskManager:
         """
         self._session_id = session_id
         self._graph_key = graph_key
-        self._selected_types: List[str] = selected_types or TaskManager.ALL_TYPES
+        self._selected_types: List[str] = (
+            selected_types or TaskManager.ALL_TYPES
+        )
 
     def search_task(self, keywords: List[str], save: bool = False):
         """
@@ -50,7 +52,9 @@ class TaskManager:
             graph summary
         """
         task_id = str(uuid.uuid4())
-        self._graph_key = self._init_query_graph(keywords=keywords, task_id=task_id)
+        self._graph_key = self._init_query_graph(
+            keywords=keywords, task_id=task_id
+        )
         task = Task(
             target=self.expand_from_query_node,
             task_uuid=task_id,
@@ -65,7 +69,9 @@ class TaskManager:
         )
         return {
             "task_id": task_id,
-            "nodes": commons.nodes_edges_to_list_of_dict(graph_, which=constants.NODES),
+            "nodes": commons.nodes_edges_to_list_of_dict(
+                graph_, which=constants.NODES
+            ),
             "edges": commons.nodes_edges_to_list_of_dict(
                 graph_, which=constants.EDGES, system_=constants.VIS_JS_SYS
             ),
@@ -102,7 +108,9 @@ class TaskManager:
         if save:
             if save:
                 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-                filename = OUTPUT_DIR / ("_".join([self._graph_key, "0", "4"]) + ".gml")
+                filename = OUTPUT_DIR / (
+                    "_".join([self._graph_key, "0", "4"]) + ".gml"
+                )
                 nx.write_gml(current_graph, filename)
 
         res = {
@@ -195,11 +203,14 @@ class TaskManager:
             session_id=self._session_id,
             graph_key=self._graph_key,
             item=item,
-            depth=1,
+            depth=1,  # todo: fix that for styling
             max_depth=1,
-            backbone_type=SpotifyWrapper().get_backbone_type(self._selected_types),
+            backbone_type=SpotifyWrapper().get_backbone_type(
+                self._selected_types
+            ),
             star_types=self._selected_types,
             set_singleton=True,
+            exploration_mode=True,
         )
         current_graph = ItemStore().get_graph(
             session_id=self._session_id, graph_key=self._graph_key
@@ -207,7 +218,9 @@ class TaskManager:
 
         if save:
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-            filename = OUTPUT_DIR / ("_".join([self._graph_key, "0", "4"]) + ".gml")
+            filename = OUTPUT_DIR / (
+                "_".join([self._graph_key, "0", "4"]) + ".gml"
+            )
             nx.write_gml(current_graph, filename)
 
         return {

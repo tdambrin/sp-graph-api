@@ -228,6 +228,7 @@ class SpotifyWrapper:
         backbone_type: str,
         star_types: List[str],
         task_id: Optional[str] = None,
+        exploration_mode: bool = False,
         **kwargs,
     ):
         """
@@ -241,6 +242,7 @@ class SpotifyWrapper:
             backbone_type (str): item type of the backbone
             star_types (List[str)]: types of the star nodes
             task_id (str): if provided, set intermediate results to task
+            exploration_mode (str): to avoid getting tracks from the same artists
             **kwargs:
 
         Returns:
@@ -257,7 +259,9 @@ class SpotifyWrapper:
 
         # Get backbone extension first
         backbone_extension_result = self.recommend_from_item(
-            item=item, limit_per_type={backbone_type: 1}
+            item=item,
+            limit_per_type={backbone_type: 1},
+            explorator_mode=exploration_mode,
         )
         backbone_extensions = ItemStore().parse_items_from_api_result(
             session_id=session_id,
@@ -285,6 +289,7 @@ class SpotifyWrapper:
                 star_types=star_types,
                 task_id=task_id,
                 color=config.NodeColor.BACKBONE,
+                exploration_mode=exploration_mode,
             )
 
         # Then get star
@@ -311,7 +316,9 @@ class SpotifyWrapper:
                 )
             else:
                 recommendation_results = self.recommend_from_item(
-                    item=item, limit_per_type=scaled_rec_weights
+                    item=item,
+                    limit_per_type=scaled_rec_weights,
+                    explorator_mode=exploration_mode,
                 )
 
             if kwargs.get("write_cache"):
@@ -363,6 +370,7 @@ class SpotifyWrapper:
         self,
         item: items.SpotifyItem,
         limit_per_type: Dict[str, int],
+        explorator_mode: bool = False,
         **kwargs,
     ):
         """
@@ -370,12 +378,13 @@ class SpotifyWrapper:
         Args:
             item: parsed starting item
             limit_per_type: max results per items type
+            explorator_mode (bool): to avoid getting tracks with same artists
         """
         all_results: Dict[str, Any] = {}
         if limit := limit_per_type.get(items.ValidItem.TRACK.value):
             item_artists_ids = item.get_artists_ids()
             # n_same_artist = ceil(limit / 2) if item_artists_ids else 0
-            n_same_artist = limit
+            n_same_artist = limit if not explorator_mode else 0
             if n_same_artist > 0:
                 all_results = utils.dict_extend(
                     all_results,
