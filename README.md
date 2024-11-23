@@ -8,7 +8,14 @@
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
-## Dev
+
+<p align="center">
+  <a href="https://spotify-graph-api-4b00479b17ee.herokuapp.com/docs#/" target="_blank">
+    <img src="https://github.com/tandpfun/skill-icons/blob/main/icons/FastAPI.svg" style="width:50px;height:50px;">
+  </a>
+</p>
+
+##  Dev
 
 To run locally, simply do
 
