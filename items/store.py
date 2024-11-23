@@ -379,8 +379,8 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         for child_id in children_ids:
             # children first for color
             self._graphs[session_id][graph_key].add_edge(
-                child_id,
                 parent_id,
+                child_id,
                 width=config.EDGE_WIDTH,
                 id=f"{parent_id}_{child_id}",
                 unordered_id=commons.commutative_hash(parent_id, child_id),
@@ -392,7 +392,14 @@ class ItemStore(metaclass=ThreadSafeSingleton):
                 session_id=session_id, graph_key=graph_key, task_id=task_id
             )
 
-    def get_successors(self, session_id: str, graph_key: str, node_id: str):
+    def get_successors(
+        self,
+        session_id: str,
+        graph_key: str,
+        node_id: str,
+        recursive: bool = True,
+        exclusion_set=None,
+    ) -> Set[str]:
         """
         Get successors of a node in the directed graph
 
@@ -400,16 +407,78 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             session_id (str): user session identifier
             graph_key (str): id of the graph to relate item in
             node_id (str): node identifier
+            recursive (bool): whether to check for successors' successors
+            exclusion_set(str): to avoid loops
         """
-        if (
-            node := self._graphs.get(session_id, {})
-            .get(graph_key, {})
-            .get(node_id)
-        ) is None:
-            return []
-        return [
-            n for n in self._graphs[session_id][graph_key].successors(node)
-        ]
+        print(f"Getting successors of {node_id}")
+        exclusion_set = exclusion_set or set()
+        graph = self._graphs.get(session_id, {}).get(graph_key, {})
+        if not graph or node_id not in graph.nodes:
+            return set()
+        current = {
+            n for n in graph.successors(n=node_id) if n not in exclusion_set
+        }
+
+        if not recursive:
+            return current
+
+        exclusion_set.add(node_id)
+        exclusion_set.union(current)
+        return current.union(
+            *(
+                self.get_successors(
+                    session_id=session_id,
+                    graph_key=graph_key,
+                    node_id=s,
+                    exclusion_set=exclusion_set,
+                )
+                for s in current
+            )
+        )
+
+    def get_predecessors(
+        self,
+        session_id: str,
+        graph_key: str,
+        node_id: str,
+        recursive: bool = True,
+        exclusion_set=None,
+    ) -> Set[str]:
+        """
+        Get predecessors of a node in the directed graph
+
+        Args:
+            session_id (str): user session identifier
+            graph_key (str): id of the graph to relate item in
+            node_id (str): node identifier
+            recursive (bool): whether to check for predecessors' predecessors
+            exclusion_set(str): to avoid loops when recursive
+        """
+        print(f"Getting predecessors of {node_id}")
+        exclusion_set = exclusion_set or set()
+        graph = self._graphs.get(session_id, {}).get(graph_key, {})
+        if not graph or node_id not in graph.nodes:
+            return set()
+        current = {
+            n for n in graph.predecessors(n=node_id) if n not in exclusion_set
+        }
+
+        if not recursive:
+            return current
+
+        exclusion_set.add(node_id)
+        exclusion_set.union(current)
+        return current.union(
+            *(
+                self.get_predecessors(
+                    session_id=session_id,
+                    graph_key=graph_key,
+                    node_id=s,
+                    exclusion_set=exclusion_set,
+                )
+                for s in current
+            )
+        )
 
     def __add_nodes_edges_to_task(
         self, session_id: str, graph_key: str, task_id: str

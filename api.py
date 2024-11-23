@@ -71,7 +71,9 @@ def get_session_params(
         "nodes": reduce(
             add,
             [
-                commons.nodes_edges_to_list_of_dict(graph_, which=constants.NODES)
+                commons.nodes_edges_to_list_of_dict(
+                    graph_, which=constants.NODES
+                )
                 for graph_ in graphs.values()
             ],
         ),
@@ -118,7 +120,9 @@ def start_expand(
         graph_key=graph_key,
         selected_types=str_to_values(selected_types, sep="+"),
     )
-    task_id = ctrl.start_expand_task(node_id=node_id, item_type=item_type, save=False)
+    task_id = ctrl.start_expand_task(
+        node_id=node_id, item_type=item_type, save=False
+    )
     return {"task_id": task_id}
 
 
@@ -142,9 +146,41 @@ def get_cached_item(item_id: str):
     return {"item": ItemStore().get(item_id)}
 
 
+@spg_api.get("/api/items/{item_id}/successors", tags=[Tags.ITEMS])
+def get_item_successors(
+    item_id: str,
+    graph_key: str,
+    session_id: Annotated[str, Header()],
+    recursive: bool = True,
+):
+    return ItemStore().get_successors(
+        session_id=session_id,
+        graph_key=graph_key,
+        node_id=item_id,
+        recursive=recursive,
+    )
+
+
+@spg_api.get("/api/items/{item_id}/predecessors", tags=[Tags.ITEMS])
+def get_item_successors(
+    item_id: str,
+    graph_key: str,
+    session_id: Annotated[str, Header()],
+    recursive: bool = True,
+):
+    return ItemStore().get_predecessors(
+        session_id=session_id,
+        graph_key=graph_key,
+        node_id=item_id,
+        recursive=recursive,
+    )
+
+
 @spg_api.get("/api/items/{item_id}", tags=[Tags.ITEMS])
 def get_item_from_spotify(item_id: str, item_type: str):
-    return {"item": SpotifyWrapper().find(item_id=item_id, item_type=item_type)}
+    return {
+        "item": SpotifyWrapper().find(item_id=item_id, item_type=item_type)
+    }
 
 
 @spg_api.get("/docs", include_in_schema=False, tags=[Tags.TECHNICAL])
