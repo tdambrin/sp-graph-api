@@ -126,6 +126,36 @@ def start_expand(
     return {"task_id": task_id}
 
 
+@spg_api.get("/api/delete/{graph_key}/{node_id}", tags=[Tags.INTERACTIONS])
+def delete(
+    graph_key: str,
+    node_id: str,
+    session_id: Annotated[str, Header()],
+    cascading: bool = True,
+):
+    nodes_to_delete = {node_id}
+    if cascading:
+        nodes_to_delete = nodes_to_delete.union(
+            ItemStore().get_successors(
+                session_id=session_id,
+                graph_key=graph_key,
+                node_id=node_id,
+                recursive=True,
+            )
+        )
+    ItemStore().delete_nodes(
+        session_id=session_id,
+        graph_key=graph_key,
+        nodes_ids=list(nodes_to_delete),
+    )
+    return {
+        "nodes": nodes_to_delete,
+    }
+
+
+# --- Tasks ---
+
+
 @spg_api.get("/api/tasks/{task_id}/status", tags=[Tags.TASKS])
 def get_task_status(task_id: str):
     return StatusManager().get_status_and_result(task_id=task_id)

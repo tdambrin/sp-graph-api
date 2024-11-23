@@ -190,6 +190,17 @@ class SpotifyWrapper:
             is_backbone=True,
         )
 
+        ItemStore().relate(
+            session_id=session_id,
+            graph_key=graph_key,
+            parent_id=graph_key,
+            children_ids={parsed_item.id for parsed_item in parsed_items},
+            depth=1,
+            task_id=task_id,
+            is_backbone=True,
+            color=config.NodeColor.BACKBONE,
+        )
+
         # Expand search
         if max_depth >= 1:
             for item in parsed_items:
@@ -204,17 +215,6 @@ class SpotifyWrapper:
                     task_id=task_id,
                     **kwargs,
                 )
-
-        ItemStore().relate(
-            session_id=session_id,
-            graph_key=graph_key,
-            parent_id=graph_key,
-            children_ids={parsed_item.id for parsed_item in parsed_items},
-            depth=1,
-            task_id=task_id,
-            is_backbone=True,
-            color=config.NodeColor.BACKBONE,
-        )
 
         return graph_key
 
@@ -276,6 +276,19 @@ class SpotifyWrapper:
             "[Error: SpotifyWrapper.find_related] "
             f"Backbone extensions larger than 1: {backbone_extensions}"
             f"From item {item}, limit per type = {backbone_type}: 1"
+        )
+
+        ItemStore().relate(
+            session_id=session_id,
+            graph_key=graph_key,
+            parent_id=item.id,
+            children_ids={
+                parsed_item.id for parsed_item in backbone_extensions
+            },
+            depth=depth,
+            task_id=task_id,
+            is_backbone=False,
+            color=config.NodeColor.BACKBONE,
         )
 
         if backbone_extensions:  # bfs
@@ -352,19 +365,6 @@ class SpotifyWrapper:
                 hidden=True,
                 is_backbone=False,
             )
-
-        ItemStore().relate(
-            session_id=session_id,
-            graph_key=graph_key,
-            parent_id=item.id,
-            children_ids={
-                parsed_item.id for parsed_item in backbone_extensions
-            },
-            depth=depth,
-            task_id=task_id,
-            is_backbone=False,
-            color=config.NodeColor.BACKBONE,
-        )
 
     def recommend_from_item(
         self,

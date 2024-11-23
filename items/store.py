@@ -126,6 +126,21 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             return
         self._graphs[session_id][graph_key] = nx.DiGraph()
 
+    def delete_nodes(
+        self, session_id: str, graph_key: str, nodes_ids: List[str]
+    ):
+        """
+        Delete nodes from Graph
+
+        Args:
+            session_id (str): user session identifier
+            graph_key (str): id of the graph to add item to
+            nodes_ids (List[str]): list of nodes id to delete
+        """
+        if self.get_graph(session_id=session_id, graph_key=graph_key) is None:
+            return
+        self._graphs[session_id][graph_key].remove_nodes_from(nodes_ids)
+
     def _add_node(
         self,
         session_id: str,
@@ -363,6 +378,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         children_ids: Set[str],
         depth: int,
         task_id: Optional[str] = None,
+        no_doubles: bool = True,
         **kwargs,
     ):
         """
@@ -375,15 +391,30 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             children_ids (List[str]): list of node ids relate parent item with
             depth (int): for styling when adding to the graph
             task_id (str): if provided, set intermediate results to task
+            no_doubles (bool): whether to prevent double edges between nodes
         """
+
+        exclusion_unordered_ids = set()
+        if no_doubles:
+            exclusion_unordered_ids = {
+                unordered_id
+                for _, _, unordered_id in self._graphs[session_id][
+                    graph_key
+                ].edges(data="unordered_id")
+            }
         for child_id in children_ids:
+            if (
+                edge_id := commons.commutative_hash(parent_id, child_id)
+            ) in exclusion_unordered_ids:
+                continue
+
             # children first for color
             self._graphs[session_id][graph_key].add_edge(
                 parent_id,
                 child_id,
                 width=config.EDGE_WIDTH,
                 id=f"{parent_id}_{child_id}",
-                unordered_id=commons.commutative_hash(parent_id, child_id),
+                unordered_id=edge_id,
                 **kwargs,
             )
 
@@ -398,7 +429,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         graph_key: str,
         node_id: str,
         recursive: bool = True,
-        exclusion_set=None,
+        exclusion_set: Set[str] = None,
     ) -> Set[str]:
         """
         Get successors of a node in the directed graph
@@ -408,11 +439,11 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             graph_key (str): id of the graph to relate item in
             node_id (str): node identifier
             recursive (bool): whether to check for successors' successors
-            exclusion_set(str): to avoid loops
+            exclusion_set (Set[str]): to avoid loops when recursive
         """
         print(f"Getting successors of {node_id}")
         exclusion_set = exclusion_set or set()
-        graph = self._graphs.get(session_id, {}).get(graph_key, {})
+        graph = self.get_graph(session_id=session_id, graph_key=graph_key)
         if not graph or node_id not in graph.nodes:
             return set()
         current = {
@@ -423,13 +454,14 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             return current
 
         exclusion_set.add(node_id)
-        exclusion_set.union(current)
+        exclusion_set = exclusion_set.union(current)
         return current.union(
             *(
                 self.get_successors(
                     session_id=session_id,
                     graph_key=graph_key,
                     node_id=s,
+                    recursive=recursive,
                     exclusion_set=exclusion_set,
                 )
                 for s in current
@@ -442,7 +474,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         graph_key: str,
         node_id: str,
         recursive: bool = True,
-        exclusion_set=None,
+        exclusion_set: Set[str] = None,
     ) -> Set[str]:
         """
         Get predecessors of a node in the directed graph
@@ -452,11 +484,11 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             graph_key (str): id of the graph to relate item in
             node_id (str): node identifier
             recursive (bool): whether to check for predecessors' predecessors
-            exclusion_set(str): to avoid loops when recursive
+            exclusion_set (Set[str]): to avoid loops when recursive
         """
         print(f"Getting predecessors of {node_id}")
         exclusion_set = exclusion_set or set()
-        graph = self._graphs.get(session_id, {}).get(graph_key, {})
+        graph = self.get_graph(session_id=session_id, graph_key=graph_key)
         if not graph or node_id not in graph.nodes:
             return set()
         current = {
@@ -467,13 +499,14 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             return current
 
         exclusion_set.add(node_id)
-        exclusion_set.union(current)
+        exclusion_set = exclusion_set.union(current)
         return current.union(
             *(
                 self.get_predecessors(
                     session_id=session_id,
                     graph_key=graph_key,
                     node_id=s,
+                    recursive=recursive,
                     exclusion_set=exclusion_set,
                 )
                 for s in current

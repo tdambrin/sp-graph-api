@@ -63,7 +63,7 @@ $ make run-local
 - [x] Fix backbone transparent from track -> done in frontend
 - [x] Random color for star groups
 - [x] Node size linear to popularity
-- [ ] Prune graph with depth on delete
+- [x] Prune graph with depth on delete
 
 # Version 0.6 - Enable graph ops
 - [ ] Add visual directions to edges and semantic labels to edges (TRACK_OF, SIMILAR_TO, ALBUM_OF, AUTHOR_OF)
