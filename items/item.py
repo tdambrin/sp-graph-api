@@ -37,7 +37,7 @@ class SpotifyItem(BaseModel):
     external_urls: Dict[str, str]
     images: Optional[List[Dict[str, Any]]] = None
     expand_enabled: bool = True
-    popularity: int = None
+    popularity: Optional[int] = None
 
     def __hash__(self):
         return self.id.__hash__()
@@ -61,7 +61,7 @@ class SpotifyItem(BaseModel):
         raise NotImplementedError
 
     def get_artists_ids(self) -> Optional[List[str]]:
-        return
+        return []
 
 
 class Artist(SpotifyItem):

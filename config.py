@@ -26,7 +26,7 @@ if not dotenv_path.is_file():
     CONF = os.environ
 else:
     print(f"Loading env from {str(dotenv_path)}")
-    CONF = dotenv_values(dotenv_path)
+    CONF = dotenv_values(dotenv_path)  # type: ignore
 SPOTIFY_CLIENT = CONF.get("SPOTIFY_CLIENT_ID")
 SPOTIFY_SECRET = CONF.get("SPOTIFY_CLIENT_SECRET")
 

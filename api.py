@@ -2,11 +2,12 @@ import uuid
 from enum import Enum
 from functools import reduce
 from operator import add
-from typing import Annotated, List, Optional
+from typing import Annotated, Any, Dict, List, Optional, Set
 
 import commons
 import config
 import constants
+import items
 from api_clients.wrappers import SpotifyWrapper
 from commons import str_to_values
 from fastapi import FastAPI, Header
@@ -55,14 +56,31 @@ spg_api.add_middleware(
 
 
 @spg_api.get("/api/sessions/create", tags=[Tags.SESSION])
-def get_session_params():
+def get_session_params() -> Dict[str, str]:
+    """
+    Get new session id
+    Returns:
+        (str) uuid
+    """
     return {"session_id": str(uuid.uuid4())}
 
 
 @spg_api.get("/api/sessions/restore", tags=[Tags.SESSION])
-def get_session_params(
+def restore_session(
     session_id: Annotated[str, Header()],
-):
+) -> Dict[str, Any]:
+    """
+    Restore session
+    Args:
+        session_id (str): uuid
+
+    Returns:
+        {
+            "graph_keys": List[str],
+            "nodes": List[Dict[str, Any]],
+            "edges": List[Dict[str, Any]]
+        }
+    """
     graphs = ItemStore().get_graphs(session_id=session_id)
     if not graphs:
         return {}
@@ -97,7 +115,22 @@ def search(
     keywords: str,
     selected_types: str,
     session_id: Annotated[str, Header()],
-):
+) -> Dict[str, Any]:
+    """
+    Start new search. Will override graphs with same keywords in same session.
+
+    Args:
+        keywords (str): '+' separated
+        selected_types (str): '+' separated
+        session_id (str): uuid
+
+    Returns:
+        {
+            "task_id": uuid,
+            "nodes": List[Dict[str, Any]],
+            "edges": List[Dict[str, Any]]
+        }
+    """
     # Parse params
     keywords_: List[str] = commons.str_to_values(keywords, sep="+")
     selected_types_: List[str] = commons.str_to_values(selected_types, sep="+")
@@ -114,7 +147,22 @@ def start_expand(
     selected_types: str,
     session_id: Annotated[str, Header()],
     item_type: Optional[str] = None,
-):
+) -> Dict[str, Any]:
+    """
+    Expand graph from node.
+
+    Args:
+        graph_key (str): identifier of query node
+        node_id (str): seed node id
+        selected_types (str): subset of ['album', 'artist','track'], '+' sep
+        session_id (str): uuid
+        item_type: one of ['album', 'artist','track']
+
+    Returns:
+        {
+            "task_id": uuid
+        }
+    """
     ctrl = TaskManager(
         session_id=session_id,
         graph_key=graph_key,
@@ -132,7 +180,22 @@ def delete(
     node_id: str,
     session_id: Annotated[str, Header()],
     cascading: bool = True,
-):
+) -> Dict[str, Any]:
+    """
+    Delete node from graph.
+
+    Args:
+        graph_key (str): identifier of query node
+        node_id (str): seed node id
+        session_id (str): uuid
+        cascading (bool): whether successors are deleted too
+
+    Returns:
+        Deleted nodes.
+        {
+            "nodes": List[Dict[str, Any]]
+        }
+    """
     nodes_to_delete = {node_id}
     if cascading:
         nodes_to_delete = nodes_to_delete.union(
@@ -157,22 +220,64 @@ def delete(
 
 
 @spg_api.get("/api/tasks/{task_id}/status", tags=[Tags.TASKS])
-def get_task_status(task_id: str):
+def get_task_status(task_id: str) -> Dict[str, Any]:
+    """
+    Get task status.
+
+    Args:
+        task_id (str): uuid
+
+    Returns:
+        {
+            "status": one of (idle, running, created, failed, completed, not_found),
+            "error": str if any,
+            **task_result if task result is dict else "result": single result
+        }
+    """
     return StatusManager().get_status_and_result(task_id=task_id)
 
 
 @spg_api.get("/api/tasks", tags=[Tags.TASKS])
-def get_all_tasks():
+def get_all_tasks() -> List[Dict[str, Any]]:
+    """
+    Get all tasks and their status
+
+    Returns:
+        [{
+            "status": one of (idle, running, created, failed, completed, not_found),
+            "error": str if any,
+            "result": task result
+        }]
+    """
     return StatusManager().all_tasks
 
 
 @spg_api.get("/api/cache/items", tags=[Tags.CACHE])
-def get_cached_items():
+def get_cached_items() -> Dict[str, Dict[str, items.SpotifyItem]]:
+    """
+    Get all items in store
+
+    Returns:
+        {
+            "items": [{item}]
+        }
+    """
     return {"items": ItemStore().get_all_items()}
 
 
 @spg_api.get("/api/cache/items/{item_id}", tags=[Tags.CACHE])
-def get_cached_item(item_id: str):
+def get_cached_item(item_id: str) -> Dict[str, Any]:
+    """
+    Get item in store
+
+    Args:
+        item_id (str): spotify id
+
+    Returns:
+        {
+            "item": {item}
+        }
+    """
     return {"item": ItemStore().get(item_id)}
 
 
@@ -182,7 +287,19 @@ def get_item_successors(
     graph_key: str,
     session_id: Annotated[str, Header()],
     recursive: bool = True,
-):
+) -> Set[str]:
+    """
+    Get item successor in a session graph
+
+    Args:
+        graph_key (str): identifier of query node
+        item_id (str): seed node id
+        session_id (str): uuid
+        recursive (bool): whether to get successors' successors
+
+    Returns:
+        list of node ids
+    """
     return ItemStore().get_successors(
         session_id=session_id,
         graph_key=graph_key,
@@ -192,12 +309,24 @@ def get_item_successors(
 
 
 @spg_api.get("/api/items/{item_id}/predecessors", tags=[Tags.ITEMS])
-def get_item_successors(
+def get_item_predecessors(
     item_id: str,
     graph_key: str,
     session_id: Annotated[str, Header()],
     recursive: bool = True,
-):
+) -> Set[str]:
+    """
+    Get item predecessors in a session graph
+
+    Args:
+        graph_key (str): identifier of query node
+        item_id (str): seed node id
+        session_id (str): uuid
+        recursive (bool): whether to get predecessors' predecessors
+
+    Returns:
+        list of node ids
+    """
     return ItemStore().get_predecessors(
         session_id=session_id,
         graph_key=graph_key,
@@ -207,7 +336,19 @@ def get_item_successors(
 
 
 @spg_api.get("/api/items/{item_id}", tags=[Tags.ITEMS])
-def get_item_from_spotify(item_id: str, item_type: str):
+def get_item_from_spotify(item_id: str, item_type: str) -> Dict[str, Any]:
+    """
+    Get item in store
+
+    Args:
+        item_id (str): spotify id
+        item_type (str): one of ['album', 'artist','track']
+
+    Returns:
+        {
+            "item": {item}
+        }
+    """
     return {
         "item": SpotifyWrapper().find(item_id=item_id, item_type=item_type)
     }

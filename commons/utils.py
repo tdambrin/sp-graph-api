@@ -25,7 +25,10 @@ def load_from_yml(path: Union[str, Path]) -> Dict[str, Any]:
     return content
 
 
-def values_to_str(values: Union[List[str], str], sep: str = ",") -> str:
+def values_to_str(
+    values: Union[List[str], str],
+    sep: str = ",",
+) -> str:
     if isinstance(values, str):
         return values
     return sep.join([value.strip() for value in values])
@@ -72,7 +75,7 @@ def scale_weights(
             "[Error: utils.scale_weights] "
             "Target sum smaller than number of bins, would result in bins deletion "
             f"target_sum={target_sum}, relative_weights: {relative_weights}"
-        )
+        )  # noqa: E501
     n = len(relative_weights)
     res = [1] * n if include_all else [0] * n
     remaining = (

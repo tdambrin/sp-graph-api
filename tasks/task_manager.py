@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import commons
 import constants
-import networkx as nx
+import networkx as nx  # type: ignore
 from api_clients.wrappers import SpotifyWrapper
 from config import OUTPUT_DIR
 from items.item import ValidItem
@@ -91,6 +91,9 @@ class TaskManager:
             save: whether to save the graph's output as html
             task_id (str): if provided, set intermediate results to task
         """
+        assert (
+            self._graph_key is not None
+        ), "Graph not properly initialized for search. Graph key is None"
         SpotifyWrapper().search(
             keywords=keywords,
             session_id=self._session_id,
@@ -143,7 +146,7 @@ class TaskManager:
         return graph_key
 
     def start_expand_task(
-        self, node_id: str, item_type: str = None, save: bool = False
+        self, node_id: str, item_type: Optional[str] = None, save: bool = False
     ):
         """
         Start the task in a thread and return task id
@@ -168,7 +171,7 @@ class TaskManager:
         return task_id
 
     def expand_from_node(
-        self, node_id: str, item_type: str = None, save: bool = False
+        self, node_id: str, item_type: Optional[str] = None, save: bool = False
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Expand the graph from one node
@@ -198,7 +201,7 @@ class TaskManager:
                 item_id=node_id,
                 item_type=ValidItem(item_type),
             )
-
+        assert self._graph_key is not None, "Graph key not provided for expand"
         SpotifyWrapper().find_related(
             session_id=self._session_id,
             graph_key=self._graph_key,

@@ -1,8 +1,6 @@
 pyyaml
 spotipy
-pyvis
 networkx
-streamlit==1.39.0
 pydantic
 jinja2
 numpy

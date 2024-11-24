@@ -71,7 +71,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         return 20
 
     @staticmethod
-    def _popularity_node_size(popularity: int = None):
+    def _popularity_node_size(popularity: Optional[int] = None):
         if popularity is None or popularity <= 20:
             return 10
         return int(popularity / 2)
@@ -148,7 +148,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         item: SpotifyItem,
         selected_types: List[str],
         depth: int = 3,
-        color: str = None,
+        color: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -273,11 +273,9 @@ class ItemStore(metaclass=ThreadSafeSingleton):
                 item=item, item_type=item_type
             )
 
-        if (
-            not self._graphs.get(session_id, {})
-            .get(graph_key)
-            .nodes.get(item["id"])
-        ):
+        graph_ = self.get_graph(session_id=session_id, graph_key=graph_key)
+        assert graph_ is not None, "Graph not in session"
+        if not graph_.nodes.get(item["id"]):
             self._add_node(
                 session_id=session_id,
                 graph_key=graph_key,
@@ -429,7 +427,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         graph_key: str,
         node_id: str,
         recursive: bool = True,
-        exclusion_set: Set[str] = None,
+        exclusion_set: Optional[Set[str]] = None,
     ) -> Set[str]:
         """
         Get successors of a node in the directed graph
@@ -474,7 +472,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         graph_key: str,
         node_id: str,
         recursive: bool = True,
-        exclusion_set: Set[str] = None,
+        exclusion_set: Optional[Set[str]] = None,
     ) -> Set[str]:
         """
         Get predecessors of a node in the directed graph

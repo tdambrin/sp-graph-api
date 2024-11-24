@@ -389,7 +389,7 @@ class SpotifyWrapper:
                 all_results = utils.dict_extend(
                     all_results,
                     self._tracks_from_artists(
-                        artists_ids=tuple(item_artists_ids),
+                        artists_ids=tuple(item_artists_ids or []),
                         limit=n_same_artist,
                     ),
                 )

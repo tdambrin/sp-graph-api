@@ -24,7 +24,10 @@ class StatusManager(metaclass=ThreadSafeSingleton):
         self.errors = {}
 
     def _set_status(
-        self, task_id: str, status: ValidStatus, error: Optional[Exception] = None
+        self,
+        task_id: str,
+        status: ValidStatus,
+        error: Optional[Exception] = None,
     ) -> ValidStatus:
         self.status[task_id] = status
         if error is not None:
@@ -55,7 +58,9 @@ class StatusManager(metaclass=ThreadSafeSingleton):
         self._set_result(task_id=task_id, result=result)
 
     def fail_task(self, task_id: str, error: Optional[Exception] = None):
-        self._set_status(task_id=task_id, status=ValidStatus.FAILED, error=error)
+        self._set_status(
+            task_id=task_id, status=ValidStatus.FAILED, error=error
+        )
 
     def complete_task(
         self,
