@@ -1,3 +1,7 @@
+# Deprecated
+
+Spotify deprecated most endpoints on 27 November 2024. Check out [their post](https://developer.spotify.com/blog/2024-11-27-changes-to-the-web-api)
+
 # Spotify Graph Search
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
