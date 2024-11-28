@@ -7,8 +7,7 @@ from typing import Annotated, Any, Dict, List, Optional, Set
 import commons
 import config
 import constants
-import items
-from api_clients.wrappers import SpotifyWrapper
+from api_clients.wrappers import DeezerWrapper
 from commons import str_to_values
 from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,7 +27,7 @@ class Tags(Enum):
     TECHNICAL = "Technical"
 
 
-spg_api = FastAPI(
+dzg_api = FastAPI(
     title="Spotify Graph API",
     default_response_class=JSONResponse,
 )
@@ -41,7 +40,7 @@ origins = [
     # "*",
 ]
 
-spg_api.add_middleware(
+dzg_api.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
@@ -55,7 +54,7 @@ spg_api.add_middleware(
 # --- Sessions ---
 
 
-@spg_api.get("/api/sessions/create", tags=[Tags.SESSION])
+@dzg_api.get("/api/sessions/create", tags=[Tags.SESSION])
 def get_session_params() -> Dict[str, str]:
     """
     Get new session id
@@ -65,7 +64,7 @@ def get_session_params() -> Dict[str, str]:
     return {"session_id": str(uuid.uuid4())}
 
 
-@spg_api.get("/api/sessions/restore", tags=[Tags.SESSION])
+@dzg_api.get("/api/sessions/restore", tags=[Tags.SESSION])
 def restore_session(
     session_id: Annotated[str, Header()],
 ) -> Dict[str, Any]:
@@ -110,7 +109,7 @@ def restore_session(
 # --- Graph Interactions ---
 
 
-@spg_api.get("/api/search/{keywords}", tags=[Tags.INTERACTIONS])
+@dzg_api.get("/api/search/{keywords}", tags=[Tags.INTERACTIONS])
 def search(
     keywords: str,
     selected_types: str,
@@ -140,10 +139,10 @@ def search(
     return ctrl.search_task(keywords=keywords_, save=False)
 
 
-@spg_api.get("/api/expand/{graph_key}/{node_id}", tags=[Tags.INTERACTIONS])
+@dzg_api.get("/api/expand/{graph_key}/{node_id}", tags=[Tags.INTERACTIONS])
 def start_expand(
     graph_key: str,
-    node_id: str,
+    node_id: int,
     selected_types: str,
     session_id: Annotated[str, Header()],
     item_type: Optional[str] = None,
@@ -153,7 +152,7 @@ def start_expand(
 
     Args:
         graph_key (str): identifier of query node
-        node_id (str): seed node id
+        node_id (int): seed node id
         selected_types (str): subset of ['album', 'artist','track'], '+' sep
         session_id (str): uuid
         item_type: one of ['album', 'artist','track']
@@ -174,10 +173,10 @@ def start_expand(
     return {"task_id": task_id}
 
 
-@spg_api.get("/api/delete/{graph_key}/{node_id}", tags=[Tags.INTERACTIONS])
+@dzg_api.get("/api/delete/{graph_key}/{node_id}", tags=[Tags.INTERACTIONS])
 def delete(
     graph_key: str,
-    node_id: str,
+    node_id: int,
     session_id: Annotated[str, Header()],
     cascading: bool = True,
 ) -> Dict[str, Any]:
@@ -186,7 +185,7 @@ def delete(
 
     Args:
         graph_key (str): identifier of query node
-        node_id (str): seed node id
+        node_id (int): seed node id
         session_id (str): uuid
         cascading (bool): whether successors are deleted too
 
@@ -219,7 +218,7 @@ def delete(
 # --- Tasks ---
 
 
-@spg_api.get("/api/tasks/{task_id}/status", tags=[Tags.TASKS])
+@dzg_api.get("/api/tasks/{task_id}/status", tags=[Tags.TASKS])
 def get_task_status(task_id: str) -> Dict[str, Any]:
     """
     Get task status.
@@ -237,7 +236,7 @@ def get_task_status(task_id: str) -> Dict[str, Any]:
     return StatusManager().get_status_and_result(task_id=task_id)
 
 
-@spg_api.get("/api/tasks", tags=[Tags.TASKS])
+@dzg_api.get("/api/tasks", tags=[Tags.TASKS])
 def get_all_tasks() -> List[Dict[str, Any]]:
     """
     Get all tasks and their status
@@ -252,8 +251,8 @@ def get_all_tasks() -> List[Dict[str, Any]]:
     return StatusManager().all_tasks
 
 
-@spg_api.get("/api/cache/items", tags=[Tags.CACHE])
-def get_cached_items() -> Dict[str, Dict[str, items.SpotifyItem]]:
+@dzg_api.get("/api/cache/items", tags=[Tags.CACHE])
+def get_cached_items() -> Dict[str, Dict[int, Any]]:
     """
     Get all items in store
 
@@ -262,16 +261,19 @@ def get_cached_items() -> Dict[str, Dict[str, items.SpotifyItem]]:
             "items": [{item}]
         }
     """
-    return {"items": ItemStore().get_all_items()}
+    all_items = ItemStore().get_all_items()
+    return {
+        "items": {item_.id: item_.as_dict() for item_ in all_items.values()}
+    }
 
 
-@spg_api.get("/api/cache/items/{item_id}", tags=[Tags.CACHE])
-def get_cached_item(item_id: str) -> Dict[str, Any]:
+@dzg_api.get("/api/cache/items/{item_id}", tags=[Tags.CACHE])
+def get_cached_item(item_id: int) -> Dict[str, Any]:
     """
     Get item in store
 
     Args:
-        item_id (str): spotify id
+        item_id (str): deezer id
 
     Returns:
         {
@@ -281,19 +283,19 @@ def get_cached_item(item_id: str) -> Dict[str, Any]:
     return {"item": ItemStore().get(item_id)}
 
 
-@spg_api.get("/api/items/{item_id}/successors", tags=[Tags.ITEMS])
+@dzg_api.get("/api/items/{item_id}/successors", tags=[Tags.ITEMS])
 def get_item_successors(
-    item_id: str,
+    item_id: int,
     graph_key: str,
     session_id: Annotated[str, Header()],
     recursive: bool = True,
-) -> Set[str]:
+) -> Set[int]:
     """
     Get item successor in a session graph
 
     Args:
         graph_key (str): identifier of query node
-        item_id (str): seed node id
+        item_id (int): seed node id
         session_id (str): uuid
         recursive (bool): whether to get successors' successors
 
@@ -308,19 +310,19 @@ def get_item_successors(
     )
 
 
-@spg_api.get("/api/items/{item_id}/predecessors", tags=[Tags.ITEMS])
+@dzg_api.get("/api/items/{item_id}/predecessors", tags=[Tags.ITEMS])
 def get_item_predecessors(
-    item_id: str,
+    item_id: int,
     graph_key: str,
     session_id: Annotated[str, Header()],
     recursive: bool = True,
-) -> Set[str]:
+) -> Set[int]:
     """
     Get item predecessors in a session graph
 
     Args:
         graph_key (str): identifier of query node
-        item_id (str): seed node id
+        item_id (int): seed node id
         session_id (str): uuid
         recursive (bool): whether to get predecessors' predecessors
 
@@ -335,13 +337,13 @@ def get_item_predecessors(
     )
 
 
-@spg_api.get("/api/items/{item_id}", tags=[Tags.ITEMS])
-def get_item_from_spotify(item_id: str, item_type: str) -> Dict[str, Any]:
+@dzg_api.get("/api/items/{item_id}", tags=[Tags.ITEMS])
+def get_item_from_deezer(item_id: int, item_type: str) -> Dict[str, Any]:
     """
     Get item in store
 
     Args:
-        item_id (str): spotify id
+        item_id (int): deezer id
         item_type (str): one of ['album', 'artist','track']
 
     Returns:
@@ -350,16 +352,18 @@ def get_item_from_spotify(item_id: str, item_type: str) -> Dict[str, Any]:
         }
     """
     return {
-        "item": SpotifyWrapper().find(item_id=item_id, item_type=item_type)
+        "item": DeezerWrapper()
+        .find(item_id=item_id, item_type=item_type)
+        .as_dict()
     }
 
 
-@spg_api.get("/docs", include_in_schema=False, tags=[Tags.TECHNICAL])
+@dzg_api.get("/docs", include_in_schema=False, tags=[Tags.TECHNICAL])
 async def get_documentation():
     return get_swagger_ui_html(openapi_url="/openapi.json", title="docs")
 
 
-@spg_api.get("/health", include_in_schema=False, tags=[Tags.TECHNICAL])
+@dzg_api.get("/health", include_in_schema=False, tags=[Tags.TECHNICAL])
 async def health():
     return {"state": "up"}
 
@@ -367,7 +371,7 @@ async def health():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(spg_api, host="127.0.0.1", port=8502, log_level="info")
+    uvicorn.run(dzg_api, host="127.0.0.1", port=8502, log_level="info")
 
     # Thread version - not reached
     import threading
@@ -375,7 +379,7 @@ if __name__ == "__main__":
     threading.Thread(
         target=uvicorn.run,
         kwargs={
-            "app": spg_api,
+            "app": dzg_api,
             "host": config.API_HOST,
             "port": config.API_PORT,
             "log_level": "info",

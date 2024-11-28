@@ -1,2 +1,2 @@
-from .item import Album, Artist, Playlist, SpotifyItem, Track, ValidItem
+from .item import DeezerResource, ResourceFactory, ValidItem
 from .store import ItemStore

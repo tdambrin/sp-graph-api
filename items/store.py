@@ -6,45 +6,25 @@ Contains:
     - graphs for each query
 """
 
-from functools import reduce
-from operator import add
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 import commons
 import config
 import constants
 import networkx as nx  # type: ignore
 from commons.metaclasses import ThreadSafeSingleton
-from items.item import Album, Artist, Playlist, SpotifyItem, Track, ValidItem
+from items.item import DeezerResource, ResourceFactory
 from status import StatusManager
 
 
 class ItemStore(metaclass=ThreadSafeSingleton):
     def __init__(self):
         """
-        _items: cache for SpotifyItem, key is spotify foreign item id
+        _items: cache for DeezerItem, key is spotify foreign item id
         _graphs: per session, per graph_key
         """
-        self._items: Dict[str, SpotifyItem] = {}
+        self._items: Dict[int, DeezerResource] = {}
         self._graphs: Dict[str, Dict[str, nx.DiGraph]] = dict()
-
-    @property
-    def _items_parser(self) -> Dict[ValidItem, Callable[..., SpotifyItem]]:
-        return {
-            ValidItem.ALBUM: Album,
-            ValidItem.ARTIST: Artist,
-            ValidItem.PLAYLIST: Playlist,
-            ValidItem.TRACK: Track,
-        }
-
-    @property
-    def _items_api_keys(self):
-        return {
-            ValidItem.ALBUM: "albums",
-            ValidItem.ARTIST: "artists",
-            ValidItem.PLAYLIST: "playlist",
-            ValidItem.TRACK: "tracks",
-        }
 
     @property
     def session_ids(self) -> Set[str]:
@@ -73,14 +53,14 @@ class ItemStore(metaclass=ThreadSafeSingleton):
     @staticmethod
     def _popularity_node_size(popularity: Optional[int] = None):
         if popularity is None or popularity <= 20:
-            return 10
-        return int(popularity / 2)
+            return 15
+        return min(popularity, 40)
 
     @staticmethod
     def graph_key_from_keywords(keywords: List[str]):
         return commons.values_to_str(keywords, "+")
 
-    def get(self, item_id: str) -> SpotifyItem | None:
+    def get(self, item_id: int) -> DeezerResource | None:
         return self._items.get(item_id)
 
     def get_all_items(self):
@@ -127,7 +107,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         self._graphs[session_id][graph_key] = nx.DiGraph()
 
     def delete_nodes(
-        self, session_id: str, graph_key: str, nodes_ids: List[str]
+        self, session_id: str, graph_key: str, nodes_ids: List[int]
     ):
         """
         Delete nodes from Graph
@@ -145,8 +125,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         self,
         session_id: str,
         graph_key: str,
-        item: SpotifyItem,
-        selected_types: List[str],
+        item: DeezerResource,
         depth: int = 3,
         color: Optional[str] = None,
         **kwargs,
@@ -157,7 +136,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         Args:
             session_id (str): user session identifier
             graph_key (str): id of the graph to add item to
-            item (items.SpotifyItem): parsed item
+            item (DeezerResource): parsed item
             selected_types (list): item types to add to node
             depth (int): for size styling
             color (str): node color, if None will be item.node_color
@@ -165,23 +144,23 @@ class ItemStore(metaclass=ThreadSafeSingleton):
 
         # Because Vis JS error if present
         optional_kwargs = {}
-        if item.images:
-            optional_kwargs["image"] = item.images[0]["url"]
+        factory_ = ResourceFactory(resource=item)
+        if factory_.image:
+            optional_kwargs["image"] = factory_.image
 
         # Add node to graph
         self._graphs[session_id][graph_key].add_node(
             item.id,
-            label=item.name,
-            title=item.title,
-            size=self._popularity_node_size(item.popularity),
-            color=color or item.node_color,
-            shape="dot" if not item.images else "circularImage",
-            href=item.external_urls.get("spotify", "_blank"),
-            preview_url=item.preview_url if isinstance(item, Track) else None,
-            expand_enabled=item.expand_enabled,
-            selected_types=commons.values_to_str(selected_types, sep="+"),
+            label=factory_.label,
+            title=factory_.title,
+            size=self._popularity_node_size(factory_.popularity),
+            color=color or factory_.node_color,  # todo: Deezer
+            shape="dot" if not factory_.image else "circularImage",
+            href=item.link or "_blank",
+            preview_url=factory_.preview_url,
+            expand_enabled=depth > 0,
             graph_key=graph_key,
-            node_type=item.type.value,
+            node_type=item.type,
             depth=depth,
             **optional_kwargs,
             **kwargs,
@@ -214,7 +193,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             self._graphs[session_id][query_key] = nx.DiGraph()
         self.init_graph(session_id=session_id, graph_key=query_key)
         self._graphs[session_id][query_key].add_node(
-            query_key,
+            hash(query_key),
             label=commons.values_to_str(query_kw, sep=" "),
             title="Query",
             size=50,
@@ -228,62 +207,40 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         )
         return query_key
 
-    def __parse_item(
-        self, item: Dict[str, Any], item_type: ValidItem
-    ) -> SpotifyItem:
-        """
-        Parse dict into subclass of items.SpotifyItem
-        Args:
-            item (dict): kwargs for item constructor
-            item_type (one of ValidItem): to select constructor
-
-        Returns:
-            parsed items.SpotifyItem
-        """
-        return self._items_parser[item_type](**item)
-
-    def __parse_item_with_type(
+    def add_nodes(
         self,
         session_id: str,
         graph_key: str,
-        item: Dict[str, Any],
-        item_type: ValidItem,
+        items_: List[DeezerResource],
         depth: int,
-        selected_types: List[str],
-        task_id: Optional[str],
+        task_id: Optional[str] = None,
         **kwargs,
-    ) -> SpotifyItem:
+    ):
         """
-        Parse item and add it to store
+        Add list of items to nodes of a graph
 
         Args:
             session_id (str): user session identifier
             graph_key (str): id of the graph to add item to
-            item (dict): item to parse and add
-            item_type (one of ValidItem):
-            depth (int): depth of node (for styling)
-            selected_types (list): item types to add to node
+            items_ (List[DeezerResource]): items to add to the graph
+            depth (int): for styling when adding to the graph
             task_id (str): if provided, set intermediate results to task
-
-        Returns:
-            parsed items.SpotifyItem
         """
-        if not self._items.get(item["id"]):
-            self._items[item["id"]] = self.__parse_item(
-                item=item, item_type=item_type
-            )
-
+        self.init_graph(session_id=session_id, graph_key=graph_key)
         graph_ = self.get_graph(session_id=session_id, graph_key=graph_key)
         assert graph_ is not None, "Graph not in session"
-        if not graph_.nodes.get(item["id"]):
-            self._add_node(
-                session_id=session_id,
-                graph_key=graph_key,
-                item=self._items[item["id"]],
-                depth=depth,
-                selected_types=selected_types,
-                **kwargs,
-            )
+
+        for item_ in items_:
+            if item_.id not in self._items:
+                self._items[item_.id] = item_
+            if not graph_.nodes.get(item_.id):
+                self._add_node(
+                    session_id=session_id,
+                    graph_key=graph_key,
+                    item=item_,
+                    depth=depth,
+                    **kwargs,
+                )
         if task_id is not None:
             self.__add_nodes_edges_to_task(
                 session_id=session_id,
@@ -291,90 +248,12 @@ class ItemStore(metaclass=ThreadSafeSingleton):
                 task_id=task_id,
             )
 
-        return self._items[item["id"]]
-
-    def parse_items_from_list(
-        self, dict_items: List[Dict[str, Any]], item_type: ValidItem
-    ) -> List[SpotifyItem]:
-        return [
-            self.__parse_item(item=item, item_type=item_type)
-            for item in dict_items
-        ]
-
-    def parse_items_from_api_result(
-        self,
-        session_id: str,
-        graph_key: str,
-        search_results: Dict[str, Any],
-        depth: int,
-        selected_types: Optional[List[str]] = None,
-        task_id: Optional[str] = None,
-        **kwargs,
-    ) -> List[SpotifyItem]:
-        """
-        Parse api result with json objects for potentially all items.SpotifyItem subclasses
-        Args:
-            session_id (str): user session identifier
-            graph_key (str): id of the graph to add item to
-            search_results (dict): api result with first level keys as spotify items names
-            depth (int): for styling when adding to the graph
-            selected_types: results obtained from filtering on these types
-            task_id (str): if provided, set intermediate results to task
-
-        Returns:
-            list of parsed items.SpotifyItem
-        """
-        selected_types = selected_types or [
-            ValidItem.ALBUM.value,
-            ValidItem.ARTIST.value,
-            ValidItem.TRACK.value,
-        ]
-
-        def _items_or_empty(
-            entry: Optional[Dict[str, Any]], entry_type: ValidItem
-        ) -> List[Dict[str, Any]]:
-            if (
-                (not entry)
-                or (entry is None)
-                or (isinstance(entry, dict) and not entry.get("items"))
-            ):
-                return []
-            return [
-                {"item": item, "item_type": entry_type}
-                for item in (
-                    entry["items"] if isinstance(entry, dict) else entry
-                )
-            ]
-
-        non_parsed_items = reduce(
-            add,
-            map(
-                _items_or_empty,
-                map(search_results.get, self._items_api_keys.values()),
-                self._items_api_keys.keys(),
-            ),
-        )
-        self.init_graph(session_id=session_id, graph_key=graph_key)
-        return [
-            self.__parse_item_with_type(
-                session_id=session_id,
-                graph_key=graph_key,
-                depth=depth,
-                selected_types=selected_types,
-                task_id=task_id,
-                **item,
-                **kwargs,
-            )
-            for item in non_parsed_items
-        ]
-
     def relate(
         self,
         session_id: str,
-        graph_key: str,
-        parent_id: str,
+        graph_key: str | int,
+        parent_id: str | int,
         children_ids: Set[str],
-        depth: int,
         task_id: Optional[str] = None,
         no_doubles: bool = True,
         **kwargs,
@@ -384,10 +263,9 @@ class ItemStore(metaclass=ThreadSafeSingleton):
 
         Args:
             session_id (str): user session identifier
-            graph_key (str): id of the graph to relate item in
-            parent_id (str): node id of the parent node to relate item with
+            graph_key (str | int): id of the graph to relate item in
+            parent_id (str | int): node id of the parent node to relate item with
             children_ids (List[str]): list of node ids relate parent item with
-            depth (int): for styling when adding to the graph
             task_id (str): if provided, set intermediate results to task
             no_doubles (bool): whether to prevent double edges between nodes
         """
@@ -404,7 +282,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             if (
                 edge_id := commons.commutative_hash(parent_id, child_id)
             ) in exclusion_unordered_ids:
-                continue
+                continue  # don't add if there is an existing edge (undirected) and no_doubles
 
             # children first for color
             self._graphs[session_id][graph_key].add_edge(
@@ -425,10 +303,10 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         self,
         session_id: str,
         graph_key: str,
-        node_id: str,
+        node_id: int,
         recursive: bool = True,
-        exclusion_set: Optional[Set[str]] = None,
-    ) -> Set[str]:
+        exclusion_set: Optional[Set[int]] = None,
+    ) -> Set[int]:
         """
         Get successors of a node in the directed graph
 
@@ -470,10 +348,10 @@ class ItemStore(metaclass=ThreadSafeSingleton):
         self,
         session_id: str,
         graph_key: str,
-        node_id: str,
+        node_id: int,
         recursive: bool = True,
-        exclusion_set: Optional[Set[str]] = None,
-    ) -> Set[str]:
+        exclusion_set: Optional[Set[int]] = None,
+    ) -> Set[int]:
         """
         Get predecessors of a node in the directed graph
 

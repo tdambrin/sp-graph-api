@@ -45,4 +45,4 @@ dev-install-deps:
 dev-install: dev-install-deps update-dev-deps mypy-install enable-pre-commit
 
 api:
-	uvicorn api:spg_api --host 127.0.0.1 --port 8502 --workers 1
+	uvicorn api:dzg_api --host 127.0.0.1 --port 8502 --workers 1
