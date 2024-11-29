@@ -1,1 +1,1 @@
-from .clients import spotify_client
+from .clients import deezer_client

@@ -198,10 +198,10 @@ def commutative_hash(*args):
     Hash function for list of strings where order of letter/words doesn't matter
     Higher collision proba as f('ab', 'ba') == f('aabb')
     Args:
-        *args: list of strings
+        *args: list of strings. will be converted to strings if not
 
     Returns:
         hash of ordered join of all letters (with duplicates)
     """
-    ordered_ = "".join(sorted(list("".join(args))))
+    ordered_ = "".join(sorted(list("".join([str(arg) for arg in args]))))
     return hashlib.shake_128(ordered_.encode("utf-8")).hexdigest(4)
