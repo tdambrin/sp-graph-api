@@ -5,3 +5,4 @@ isort
 flake8
 pylint
 mypy
+bandit

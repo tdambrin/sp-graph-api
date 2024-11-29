@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import commons
 import constants
 import networkx as nx  # type: ignore
-from api_clients.wrappers import SpotifyWrapper
+from api_clients.wrappers import DeezerWrapper
 from config import OUTPUT_DIR
 from items.item import ValidItem
 from items.store import ItemStore
@@ -94,14 +94,13 @@ class TaskManager:
         assert (
             self._graph_key is not None
         ), "Graph not properly initialized for search. Graph key is None"
-        SpotifyWrapper().search(
+        DeezerWrapper().search(
             keywords=keywords,
             session_id=self._session_id,
             graph_key=self._graph_key,
             max_depth=3,
             restricted_types=self._selected_types,
-            set_singleton=True,
-            write_cache=True,
+            write_cache=False,
             task_id=task_id,
         )
         current_graph = ItemStore().get_graph(
@@ -146,14 +145,14 @@ class TaskManager:
         return graph_key
 
     def start_expand_task(
-        self, node_id: str, item_type: Optional[str] = None, save: bool = False
+        self, node_id: int, item_type: Optional[str] = None, save: bool = False
     ):
         """
         Start the task in a thread and return task id
         Args:
-            node_id: node from which to expand
-            item_type: to retrieve from spotify if not in cache
-            save: whether to save the html graph as a result (default false)
+            node_id (int): node from which to expand
+            item_type (str): to retrieve from spotify if not in cache
+            save (bool): whether to save the html graph as a result (default false)
 
         Returns:
             task id
@@ -171,14 +170,15 @@ class TaskManager:
         return task_id
 
     def expand_from_node(
-        self, node_id: str, item_type: Optional[str] = None, save: bool = False
+        self, node_id: int, item_type: Optional[str] = None, save: bool = False
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Expand the graph from one node
+
         Args:
-            node_id: node from which to expand
-            item_type: to retrieve from spotify if not in cache
-            save: whether to save the html graph as a result (default false)
+            node_id (int): node from which to expand
+            item_type (str): to retrieve from spotify if not in cache
+            save (bool): whether to save the html graph as a result (default false)
 
         Returns:
             nodes and edges as dict
@@ -197,22 +197,21 @@ class TaskManager:
                     """
                 )
 
-            item = SpotifyWrapper().find(
+            item = DeezerWrapper().find(
                 item_id=node_id,
                 item_type=ValidItem(item_type),
             )
         assert self._graph_key is not None, "Graph key not provided for expand"
-        SpotifyWrapper().find_related(
+        DeezerWrapper().find_related(
             session_id=self._session_id,
             graph_key=self._graph_key,
-            item=item,
+            item_=item,
             depth=1,  # todo: fix that for styling
             max_depth=1,
-            backbone_type=SpotifyWrapper().get_backbone_type(
+            backbone_type=DeezerWrapper().get_backbone_type(
                 self._selected_types
             ),
             star_types=self._selected_types,
-            set_singleton=True,
             exploration_mode=True,
         )
         current_graph = ItemStore().get_graph(
