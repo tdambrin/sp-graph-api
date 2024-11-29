@@ -2,9 +2,7 @@ pyyaml
 deezer-python
 networkx
 pydantic
-jinja2
 numpy
-python-dotenv
 matplotlib # for color styling
 # retry # to avoid fetching nodes already in the graph
 
