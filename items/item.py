@@ -8,7 +8,7 @@ Contains:
 """
 
 from enum import Enum
-from typing import Annotated, Any, List
+from typing import Annotated, Any, Dict, List
 
 import deezer
 from config import NodeColor
@@ -26,10 +26,11 @@ def is_deezer_resource(v: Any):
 
 DeezerResource = Annotated[Any, BeforeValidator(is_deezer_resource)]
 
-# -- Classes --
+
+# -- Utils --
 
 
-class ValidItem(Enum):
+class ValidItem(Enum):  # should match deezer types
     ALBUM = "album"
     ARTIST = "artist"
     PLAYLIST = "playlist"
@@ -39,8 +40,65 @@ class ValidItem(Enum):
     AUDIOBOOK = "audiobook"
 
 
+POPULARITY_THRESHOLDS: Dict[str, int] = {
+    ValidItem.ARTIST.value: int(2e4),
+    ValidItem.ALBUM.value: int(2e3),
+    ValidItem.TRACK.value: int(1e4),
+}
+
+POPULARITY_UPPERS: Dict[str, int] = {
+    ValidItem.ARTIST.value: int(12e6),  # Taylor Swift (2023)
+    ValidItem.ALBUM.value: int(2e5),  # Bad Bunny - Un Verano Sin Ti (2023)
+    ValidItem.TRACK.value: int(1e6),  # Known upper limit
+}
+
+# -- Classes --
+
+
 class ResourceFactory(BaseModel):
     resource: DeezerResource
+
+    def get_target_label(self, target_type: ValidItem) -> str:
+        """
+        Get label of target_type from another type.
+        E.g. get artist name from self.resource being a track
+        Args:
+            target_type (ValidItem): label should be one of this type
+
+        Returns:
+            label as string
+        """
+        if self.resource.type == target_type.value:
+            return self.label
+
+        if target_type == ValidItem.ALBUM:
+            if isinstance(self.resource, deezer.Artist):
+                # first album name
+                return ResourceFactory(
+                    resource=self.resource.get_albums(limit=1)[0]
+                ).label
+            if isinstance(self.resource, deezer.Track):
+                return ResourceFactory(resource=self.resource.album).label
+
+        if target_type == ValidItem.ARTIST:
+            if isinstance(self.resource, deezer.Album):
+                return ResourceFactory(resource=self.resource.artist).label
+            if isinstance(self.resource, deezer.Track):
+                return ResourceFactory(resource=self.resource.artist).label
+
+        if target_type == ValidItem.TRACK:
+            if isinstance(self.resource, deezer.Album):
+                return ResourceFactory(resource=self.resource.tracks[0]).label
+            if isinstance(self.resource, deezer.Artist):
+                return ResourceFactory(
+                    resource=self.resource.get_top(limit=1)[0]
+                ).label
+
+        raise NotImplementedError(
+            "[ResourceFactory.get_target_label]"
+            f" Target type {target_type.value} not supported"
+            f" for resource of type {self.resource.type}"
+        )
 
     @property
     def label(self) -> str:
@@ -54,6 +112,18 @@ class ResourceFactory(BaseModel):
             "[ResourceFactory.label]"
             f" {self.resource.__class__} not supported for label property"
         )
+
+    @property
+    def full_name(self):
+        name = self.label
+        if isinstance(self.resource, deezer.Album):
+            artist_names = [c.name for c in self.resource.contributors]
+            return f"{name} {' '.join(artist_names)}"
+        if isinstance(self.resource, deezer.Track):
+            artist_names = [c.name for c in self.resource.contributors]
+            album_name = self.resource.album.label
+            return f"{name} {' '.join(artist_names)} {album_name}"
+        return name  # Artist
 
     @property
     def title(self) -> str:
@@ -88,9 +158,9 @@ class ResourceFactory(BaseModel):
     @property
     def image(self) -> str | None:
         if isinstance(self.resource, deezer.Artist):
-            return self.resource.picture
+            return self.resource.picture_medium
         if isinstance(self.resource, deezer.Album):
-            return self.resource.cover
+            return self.resource.cover_medium
         if isinstance(self.resource, deezer.Track):
             return None  # no image for tracks
         raise NotImplementedError(
@@ -99,23 +169,35 @@ class ResourceFactory(BaseModel):
         )
 
     @property
-    def popularity(self) -> int:
+    def popularity_indicator(self) -> int:
         if isinstance(self.resource, deezer.Track):
-            return int(self.resource.rank / 1e4)
+            return self.resource.rank
         if isinstance(self.resource, deezer.Artist):
-            return min(
-                int(self.resource.nb_fan / 1e3),
-                70,
-            )
+            return self.resource.nb_fan
         if isinstance(self.resource, deezer.Album):
-            return min(
-                int(self.resource.fans / 1e2),
-                70,
-            )
+            return self.resource.fans
+
         raise NotImplementedError(
-            "[ResourceFactory.popularity]"
+            "[ResourceFactory.popularity_indicator]"
             f" {self.resource.__class__} not supported for popularity property"
         )
+
+    @property
+    def popularity_upper(self):
+        return POPULARITY_UPPERS[self.resource.type]
+
+    @property
+    def popularity_distance(self) -> int:
+        return self.popularity_indicator - self.popularity_threshold
+
+    @property
+    def popularity(self) -> int:  # fixMe - not very contrasted
+        """is a percent"""
+        return int(self.popularity_indicator / self.popularity_upper * 100)
+
+    @property
+    def popularity_threshold(self) -> int:
+        return POPULARITY_THRESHOLDS[self.resource.type]
 
     @property
     def node_color(self) -> str:

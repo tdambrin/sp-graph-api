@@ -38,6 +38,21 @@ def str_to_values(values: str, sep: str = ",") -> List[str]:
     return [value.strip() for value in values.split(sep)]
 
 
+def order_words(s: str, sep: str = " "):
+    """
+    Return input string with sorted words
+    e.g. 'bob and alice' -> 'alice and bob'
+
+    Args:
+        s (str): string to order
+        sep (str): words separator
+
+    Returns:
+        (str)
+    """
+    return sep.join(sorted(s.split(sep)))
+
+
 def dict_extend(*args) -> Dict[Any, Any]:
     """
     same as {**d1, **d2} but add overlapping values instead of overriding

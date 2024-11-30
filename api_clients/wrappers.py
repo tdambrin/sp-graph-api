@@ -2,10 +2,12 @@ import functools
 import json
 import operator
 import random
+from difflib import SequenceMatcher
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import commons
 import config
+import deezer
 from commons import utils
 from items import DeezerResource, ItemStore, ResourceFactory, ValidItem
 
@@ -15,37 +17,32 @@ from .clients import deezer_client
 class DeezerWrapper:
     REC_SIZE = 5  # Recommendation max size for one node
 
+    ALL_TYPES: List[str] = [
+        ValidItem.ALBUM.value,
+        ValidItem.ARTIST.value,
+        ValidItem.TRACK.value,
+        # ValidItem.PLAYLIST.value,
+        # ValidItem.SHOW.value, ValidItem.EPISODE.value, ValidItem.AUDIOBOOK.value,
+    ]
+
+    # Backbone type selector
+    BACKBONE_PRIORITIES: Dict[str, int] = {
+        ValidItem.ARTIST.value: 1,
+        ValidItem.ALBUM.value: 2,
+        ValidItem.TRACK.value: 3,
+    }
+
+    # Recommendation weight for each type when several possible
+    TYPE_REC_WEIGHT: Dict[str, int] = {
+        ValidItem.ALBUM.value: 1,
+        ValidItem.ARTIST.value: 1,
+        ValidItem.TRACK.value: 3,
+        # ValidItem.PLAYLIST.value: 0,
+        # ValidItem.SHOW.value: 0, ValidItem.EPISODE.value: 0, ValidItem.AUDIOBOOK.value: 0,
+    }
+
     def __init__(self):
         self.__client = deezer_client
-
-    @property
-    def all_types(self):
-        return [
-            ValidItem.ALBUM.value,
-            ValidItem.ARTIST.value,
-            ValidItem.TRACK.value,
-            # ValidItem.PLAYLIST.value,
-            # ValidItem.SHOW.value, ValidItem.EPISODE.value, ValidItem.AUDIOBOOK.value,
-        ]
-
-    @property
-    def backbone_priorities(self) -> Dict[str, int]:
-        return {
-            ValidItem.ARTIST.value: 1,
-            ValidItem.ALBUM.value: 2,
-            ValidItem.TRACK.value: 3,
-        }
-
-    @property
-    def type_rec_weight(self) -> Dict[str, int]:
-        """Recommendation weight for each type when several possible"""
-        return {
-            ValidItem.ALBUM.value: 1,
-            ValidItem.ARTIST.value: 1,
-            ValidItem.TRACK.value: 3,
-            # ValidItem.PLAYLIST.value: 0,
-            # ValidItem.SHOW.value: 0, ValidItem.EPISODE.value: 0, ValidItem.AUDIOBOOK.value: 0,
-        }
 
     @staticmethod
     def cache(name, obj):
@@ -64,7 +61,8 @@ class DeezerWrapper:
 
     # -- Helpers --
 
-    def get_backbone_type(self, restricted_types: List[str]) -> str:
+    @classmethod
+    def get_backbone_type(cls, restricted_types: List[str]) -> str:
         """
         Get backbone type out of list of restricted types
         Args:
@@ -74,7 +72,7 @@ class DeezerWrapper:
             selected backbone type, one of restricted_types
         """
         candidates = sorted(
-            restricted_types, key=lambda type_: self.backbone_priorities[type_]
+            restricted_types, key=lambda type_: cls.BACKBONE_PRIORITIES[type_]
         )
         return next(iter(candidates))
 
@@ -144,6 +142,153 @@ class DeezerWrapper:
             f"Item type {item_type} not supported"
         )
 
+    def _search_best_type(
+        self,
+        keywords: List[str],
+        target_type: str,
+        allowed_types: List[str],
+        limit: int = 5,
+    ) -> List[DeezerResource]:
+        """
+        Search a list of target_type items from keywords.
+        Patches the poor ability for deezer/search to find an item of type X from keywords for type B.
+
+        Args:
+            keywords (List[str]): search keywords
+            target_type (str): one of ValidItem.values(), the type of the return objects
+            allowed_types (List[str]): list of types allowed to scan
+            limit (str): results limit
+
+        Returns:
+            list of DeezerResource with subtype = target_type
+        """  # noqa: E501
+        keywords_str = commons.values_to_str(keywords, sep=" ")
+        type_priorities = [
+            ValidItem.TRACK.value,
+            ValidItem.ARTIST.value,
+            ValidItem.ALBUM.value,
+        ]  # people more likely to search tracks than artists than albums
+
+        # scan all and find best match
+        best_type = None
+        best_results = None
+        for candidate_type in allowed_types:
+            candidate_results = self._search_item_type(
+                item_type=candidate_type,
+                keywords=keywords,
+                limit=limit,
+            )  # should be first one matching query best
+            if not candidate_results:
+                continue
+            if best_results is None or DeezerWrapper._is_better_match(
+                candidate=candidate_results[0],
+                champion=best_results[0],
+                keywords=keywords_str,
+                types_priority=type_priorities,
+                hipster_mode=False,  # fixMe: feature
+            ):
+                best_results = candidate_results
+                best_type = candidate_type
+
+        if best_type == target_type:
+            return best_results
+
+        factory_ = ResourceFactory(resource=best_results[0])
+
+        return self._search_item_type(
+            item_type=target_type,
+            keywords=commons.str_to_values(
+                factory_.get_target_label(target_type=ValidItem(target_type)),
+                sep=" ",
+            ),
+            limit=limit,
+        )
+
+    @staticmethod
+    def _is_better_match(
+        candidate: deezer.Resource,
+        champion: deezer.Resource,
+        keywords: str,
+        types_priority: List[str],
+        hipster_mode: bool = False,
+    ) -> bool:
+        """
+        Whether the candidate is a better search match than the champion.
+
+        Args:
+            candidate (deezer.Resource): candidate result
+            champion (deezer.Resource): current best match
+            keywords (str): query keywords
+            types_priority (List[str]): the lower the index the more encouraged
+            hipster_mode (bool): should encourage a less popular result
+
+        Returns:
+            (bool)
+        """  # noq: E501
+
+        score_calculator = functools.partial(
+            DeezerWrapper._match_score,
+            keywords=keywords,
+            types_priority=types_priority,
+            hipster_mode=hipster_mode,
+        )
+
+        return score_calculator(candidate) > score_calculator(champion)
+
+    @staticmethod
+    def _match_score(
+        candidate: deezer.Resource,
+        keywords: str,
+        types_priority: List[str],
+        hipster_mode: bool = False,
+    ) -> float:
+        """
+        Compute a match score for candidate given query keywords and advanced modes.
+        Formula: w_str - .5 * w_type + w_pop, all weights in [0..1]
+        where:
+            - w_str: SequenceMatcher().ratio for candidate - SequenceMatcher().ratio for champion
+            - w_type: penalty of type priority (0 if candidate type is first in types_priority)
+            - w_pop: +/- a normalized popularity score.
+                     - if hipster_mode
+                     + if not
+
+        Args:
+            candidate (deezer.Resource): candidate result
+            keywords (str): query keywords
+            types_priority (List[str]): the lower the index the more encouraged
+            hipster_mode (bool): encourages a less popular result
+
+        Returns:
+            (float) a match score
+        """
+        factory_ = ResourceFactory(resource=candidate)
+        # Weight of keywords match
+        w_str = SequenceMatcher(
+            None,
+            utils.order_words(keywords.lower(), sep=" "),
+            utils.order_words(factory_.full_name, sep=" ").lower(),
+        ).ratio()
+
+        # Weight of type priority
+        w_type = types_priority.index(candidate.type) / max(
+            len(types_priority) - 1, 1
+        )
+
+        # Weight of popularity (people usually search for popular things unless hipster mode activated)
+        hipster_multiplier = -1 if hipster_mode else 1
+
+        # Deactivated to simplify - Thresholds
+        # distance = factory_.popularity_distance
+        # bound = 0 if distance < 0 else DeezerWrapper.POPULARITY_UPPERS[candidate.type]
+        # normalization_factor = abs(bound - factory_.popularity_threshold)
+        # w_pop = hipster_multiplier * (distance / normalization_factor)
+
+        w_pop = (
+            hipster_multiplier * factory_.popularity / 100
+        )  # popularity is a percent
+
+        return 2 * w_str - 0.1 * w_type + w_pop
+
     def search(
         self,
         keywords: List[str],
@@ -171,12 +316,14 @@ class DeezerWrapper:
         Returns:
             id of the graph
         """
-        restricted_types = restricted_types or self.all_types
+        restricted_types = restricted_types or DeezerWrapper.ALL_TYPES
 
-        assert len(set(restricted_types) - set(self.all_types)) == 0, (
+        assert (
+            len(set(restricted_types) - set(DeezerWrapper.ALL_TYPES)) == 0
+        ), (
             "[Error: DeezerWrapper.search] "
             f"restricted_types={','.join(restricted_types)} contains illegal values."
-            f"Accepted values are {','.join(self.all_types)}"
+            f"Accepted values are {','.join(DeezerWrapper.ALL_TYPES)}"
         )
 
         backbone_type = self.get_backbone_type(
@@ -189,9 +336,10 @@ class DeezerWrapper:
                 f"search_{graph_key.lower()}.json"
             )
         else:
-            search_results = self._search_item_type(
-                item_type=backbone_type,
+            search_results = self._search_best_type(
                 keywords=keywords,
+                allowed_types=restricted_types,
+                target_type=backbone_type,
                 limit=DeezerWrapper.REC_SIZE,
             )
 
@@ -259,7 +407,7 @@ class DeezerWrapper:
             depth (int): current depth
             max_depth (int): maximum depth allowed, inclusive
             backbone_type (str): item type of the backbone
-            star_types (List[str)]: types of the star nodes
+            star_types (List[str]): types of the star nodes
             task_id (str): if provided, set intermediate results to task
             exploration_mode (str): to avoid getting tracks from the same artists
             **kwargs:
@@ -269,10 +417,10 @@ class DeezerWrapper:
         if depth > max_depth:
             return
 
-        assert backbone_type in self.all_types, (
+        assert backbone_type in DeezerWrapper.ALL_TYPES, (
             "[Error: DeezerWrapper.find_related] "
             f"Illegal value for backbone type : {backbone_type}. "
-            f"Accepted values are {','.join(self.all_types)}"
+            f"Accepted values are {','.join(DeezerWrapper.ALL_TYPES)}"
         )
 
         # Get backbone extension first
@@ -330,7 +478,7 @@ class DeezerWrapper:
 
         if star_types:  # If no start type, no star
             relative_rec_weights = [
-                self.type_rec_weight[_type] for _type in star_types
+                DeezerWrapper.TYPE_REC_WEIGHT[_type] for _type in star_types
             ]
             scaled_rec_weights = {
                 _type: scaled_weight

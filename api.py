@@ -36,7 +36,6 @@ origins = [
     "http://localhost:8080",
     "http://192.168.1.155:8080",
     "http://localhost:8502",
-    "https://tdambrin.github.io/",
     "https://tdambrin.github.io",
     # "*",
 ]

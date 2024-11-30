@@ -54,7 +54,7 @@ class ItemStore(metaclass=ThreadSafeSingleton):
     def _popularity_node_size(popularity: Optional[int] = None):
         if popularity is None or popularity <= 20:
             return 15
-        return min(popularity, 40)
+        return min(popularity, 50)
 
     @staticmethod
     def graph_key_from_keywords(keywords: List[str]):
