@@ -76,7 +76,7 @@ class DeezerWrapper:
         )
         return next(iter(candidates))
 
-    # -- Spotify methods --
+    # -- Deezer methods --
 
     def find(
         self,
@@ -84,7 +84,7 @@ class DeezerWrapper:
         item_type: Union[ValidItem, str],
     ) -> DeezerResource:
         """
-        Find an item from Spotify
+        Find an item from Deezer
 
         Args:
             item_id (int): id of the item looked for

@@ -78,3 +78,5 @@ $ make run-local
 
 # Version 0.6 - Enable graph ops
 - [ ] Add visual directions to edges and semantic labels to edges (TRACK_OF, SIMILAR_TO, ALBUM_OF, AUTHOR_OF)
+
+# Version 0.7 - Switched to Deezer

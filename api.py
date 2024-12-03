@@ -28,7 +28,7 @@ class Tags(Enum):
 
 
 dzg_api = FastAPI(
-    title="Spotify Graph API",
+    title="Deezer Graph API",
     default_response_class=JSONResponse,
 )
 
