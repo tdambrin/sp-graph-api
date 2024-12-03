@@ -6,14 +6,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import constants
-import matplotlib.colors as mcolors
 import networkx as nx  # type: ignore
 import numpy as np
 import yaml
 
 
 def random_color_generator():
-    color = random.choice(list(mcolors.CSS4_COLORS.values())).lower()
+    color = random.choice(list(constants.CSS4_COLORS.values())).lower()
     return color
 
 
@@ -38,7 +37,7 @@ def str_to_values(values: str, sep: str = ",") -> List[str]:
     return [value.strip() for value in values.split(sep)]
 
 
-def order_words(s: str, sep: str = " "):
+def order_words(s: str, sep: str = " ", fixed_len: int = 0):
     """
     Return input string with sorted words
     e.g. 'bob and alice' -> 'alice and bob'
@@ -46,11 +45,15 @@ def order_words(s: str, sep: str = " "):
     Args:
         s (str): string to order
         sep (str): words separator
+        fixed_len (int): if pos, will right fill res string with spaces
 
     Returns:
         (str)
     """
-    return sep.join(sorted(s.split(sep)))
+    ordered = sep.join(sorted(s.split(sep)))
+    if fixed_len <= 0:
+        return ordered
+    return ordered.ljust(fixed_len)
 
 
 def dict_extend(*args) -> Dict[Any, Any]:

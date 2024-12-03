@@ -162,47 +162,51 @@ class DeezerWrapper:
         Returns:
             list of DeezerResource with subtype = target_type
         """  # noqa: E501
+
         keywords_str = commons.values_to_str(keywords, sep=" ")
         type_priorities = [
             ValidItem.TRACK.value,
             ValidItem.ARTIST.value,
             ValidItem.ALBUM.value,
         ]  # people more likely to search tracks than artists than albums
-
         # scan all and find best match
-        best_type = None
-        best_results = None
-        for candidate_type in allowed_types:
-            candidate_results = self._search_item_type(
-                item_type=candidate_type,
-                keywords=keywords,
-                limit=limit,
-            )  # should be first one matching query best
-            if not candidate_results:
-                continue
-            if best_results is None or DeezerWrapper._is_better_match(
-                candidate=candidate_results[0],
-                champion=best_results[0],
-                keywords=keywords_str,
-                types_priority=type_priorities,
-                hipster_mode=False,  # fixMe: feature
-            ):
-                best_results = candidate_results
-                best_type = candidate_type
 
-        if best_type == target_type:
-            return best_results
-
-        factory_ = ResourceFactory(resource=best_results[0])
-
-        return self._search_item_type(
-            item_type=target_type,
-            keywords=commons.str_to_values(
-                factory_.get_target_label(target_type=ValidItem(target_type)),
-                sep=" ",
-            ),
-            limit=limit,
+        search_partial = functools.partial(
+            self._search_item_type,
+            keywords=keywords,
+            limit=limit * 3,
+            # ^ to allow bigger range and get limit artists out of the results
         )
+        score_partial = functools.partial(
+            DeezerWrapper._match_score,
+            keywords=keywords_str,
+            types_priority=type_priorities,
+            hipster_mode=False,
+        )
+
+        # get all candidates for all types
+        all_candidates = sorted(
+            [
+                candidate_res
+                for candidate_type in allowed_types
+                for candidate_res in search_partial(item_type=candidate_type)
+            ],
+            key=lambda c: -score_partial(c),
+        )
+
+        # select the #limit best ones
+        best_candidates = {}
+        for candidate_resource in all_candidates:
+            for converted in ResourceFactory(
+                resource=candidate_resource
+            ).to_type(
+                target_type=ValidItem(target_type),
+            ):
+                if best_candidates.get(converted.id) is None:
+                    best_candidates[converted.id] = converted
+                    if len(best_candidates) == limit:
+                        return list(best_candidates.values())
+        return list(best_candidates.values())
 
     @staticmethod
     def _is_better_match(
@@ -261,13 +265,24 @@ class DeezerWrapper:
         Returns:
             (float) a match score
         """
+
         factory_ = ResourceFactory(resource=candidate)
+
         # Weight of keywords match
+        max_full_name_len = 30 + 70 + 70  # artist + album + track
         w_str = SequenceMatcher(
             None,
-            utils.order_words(keywords.lower(), sep=" "),
-            utils.order_words(factory_.full_name, sep=" ").lower(),
+            utils.order_words(
+                keywords.lower(), sep=" ", fixed_len=max_full_name_len
+            ),
+            utils.order_words(
+                factory_.full_name.lower(),
+                sep=" ",
+                fixed_len=max_full_name_len,
+            ),
         ).ratio()
+
+        # start = time.time()
 
         # Weight of type priority
         w_type = types_priority.index(candidate.type) / max(
@@ -331,22 +346,12 @@ class DeezerWrapper:
         )
 
         # Get Deezer results
-        if kwargs.get("read_cache"):
-            search_results = DeezerWrapper.read_cache(
-                f"search_{graph_key.lower()}.json"
-            )
-        else:
-            search_results = self._search_best_type(
-                keywords=keywords,
-                allowed_types=restricted_types,
-                target_type=backbone_type,
-                limit=DeezerWrapper.REC_SIZE,
-            )
-
-        if kwargs.get("write_cache"):
-            DeezerWrapper.cache(
-                f"search_{graph_key.lower()}.json", search_results
-            )
+        search_results = self._search_best_type(
+            keywords=keywords,
+            allowed_types=restricted_types,
+            target_type=backbone_type,
+            limit=DeezerWrapper.REC_SIZE,
+        )
 
         # Parse and set results to store
         ItemStore().add_nodes(
@@ -369,19 +374,25 @@ class DeezerWrapper:
         )
 
         # Expand search
+        exploration_mode = {
+            **{t: False for t in restricted_types},
+            backbone_type: True,
+        }
+        related_partial = functools.partial(
+            self.find_related,
+            session_id=session_id,
+            graph_key=graph_key,
+            depth=2,
+            max_depth=max_depth,
+            backbone_type=backbone_type,
+            star_types=restricted_types,
+            task_id=task_id,
+            exploration_mode=exploration_mode,
+            **kwargs,
+        )
         if max_depth >= 1:
             for item_ in search_results:
-                self.find_related(
-                    session_id=session_id,
-                    graph_key=graph_key,
-                    item_=item_,
-                    depth=2,
-                    max_depth=max_depth,
-                    backbone_type=backbone_type,
-                    star_types=restricted_types,
-                    task_id=task_id,
-                    **kwargs,
-                )
+                related_partial(item_=item_)
 
         return graph_key
 
@@ -395,7 +406,7 @@ class DeezerWrapper:
         backbone_type: str,
         star_types: List[str],
         task_id: Optional[str] = None,
-        exploration_mode: bool = False,
+        exploration_mode: bool | Dict[str, bool] = False,
         **kwargs,
     ):
         """
@@ -409,13 +420,28 @@ class DeezerWrapper:
             backbone_type (str): item type of the backbone
             star_types (List[str]): types of the star nodes
             task_id (str): if provided, set intermediate results to task
-            exploration_mode (str): to avoid getting tracks from the same artists
+            exploration_mode (bool | dict[type, bool]): to avoid getting tracks from the same artists
             **kwargs:
         """
+
+        # -- Input validation --
         if not item_:
             return
         if depth > max_depth:
             return
+        if isinstance(exploration_mode, dict) and not (
+            {backbone_type, *star_types} == set(exploration_mode.keys())
+        ):
+            raise ValueError(  # noqa: E501
+                "[Error: DeezerWrapper.find_related]"
+                f" Illegal value for exploration_mode : {exploration_mode}. "
+                f" Provide the a value for each type in {', '.join([backbone_type, *star_types])}"
+            )
+
+        if isinstance(exploration_mode, bool):
+            exploration_mode = {
+                t: exploration_mode for t in [backbone_type, *star_types]
+            }
 
         assert backbone_type in DeezerWrapper.ALL_TYPES, (
             "[Error: DeezerWrapper.find_related] "
@@ -423,6 +449,7 @@ class DeezerWrapper:
             f"Accepted values are {','.join(DeezerWrapper.ALL_TYPES)}"
         )
 
+        # -- Core --
         # Get backbone extension first
         backbone_extension = list(
             self.recommend_from_item(
@@ -468,8 +495,8 @@ class DeezerWrapper:
                 backbone_type=backbone_type,
                 star_types=star_types,
                 task_id=task_id,
-                color=config.NodeColor.BACKBONE,
                 exploration_mode=exploration_mode,
+                color=config.NodeColor.BACKBONE,
             )
 
         # Then get star
@@ -490,21 +517,13 @@ class DeezerWrapper:
                 )
             }
 
-            if kwargs.get("read_cache"):
-                star_items = DeezerWrapper.read_cache(
-                    f"recommend_{item_.id}.json"
+            star_items = list(
+                self.recommend_from_item(
+                    item_=item_,
+                    limit_per_type=scaled_rec_weights,
+                    exploration_mode=exploration_mode,
                 )
-            else:
-                star_items = list(
-                    self.recommend_from_item(
-                        item_=item_,
-                        limit_per_type=scaled_rec_weights,
-                        exploration_mode=exploration_mode,
-                    )
-                )
-
-            if kwargs.get("write_cache"):
-                DeezerWrapper.cache(f"recommend_{item_.id}.json", star_items)
+            )
 
             # For styling - new group
             random_color = commons.random_color_generator()
@@ -531,167 +550,75 @@ class DeezerWrapper:
                 is_backbone=False,
             )
 
+    @staticmethod
     def recommend_from_item(
-        self,
         item_: DeezerResource,
         limit_per_type: Dict[str, int],
-        exploration_mode: bool = False,
+        exploration_mode: Dict[str, bool] = None,
     ) -> Set[DeezerResource]:
         """
         Get recommendation results from item. Add items to ItemStore
         Args:
             item_ (DeezerResource): parsed starting item
             limit_per_type (dict): max results per items type
-            exploration_mode (bool): to avoid getting tracks with same artists
+            exploration_mode (bool | dict[type, bool]): get from different artists
 
         Returns:
             tuple of recommended DeezerResource
         """
         if not item_:
             return set()
+        if exploration_mode is None:
+            exploration_mode = {t: False for t in limit_per_type.keys()}
 
         all_results = set()
         factory_ = ResourceFactory(resource=item_)
         if limit := limit_per_type.get(ValidItem.TRACK.value):
-            # n_same_artist = ceil(limit / 2) if item_artists_ids else 0
-            n_same_artist = limit if not exploration_mode else 0
-            if n_same_artist > 0:
+            if not exploration_mode[ValidItem.TRACK.value]:
                 all_results.update(
-                    self._tracks_from_artists(
-                        artists_ids=tuple(factory_.artist_ids),
-                        limit=n_same_artist,
+                    set(
+                        factory_.dive(target_type=ValidItem.TRACK, limit=limit)
                     )
                 )
-            n_other_artists = limit - n_same_artist
-            all_results.update(
-                self._recommend_track_exploration_mode(
-                    item_=item_,
-                    limit=n_other_artists,
+            else:
+                all_results.update(
+                    set(
+                        factory_.explore(
+                            target_type=ValidItem.TRACK, limit=limit
+                        )
+                    )
                 )
-            )
         if limit := limit_per_type.get(ValidItem.ALBUM.value):
             # get artists albums
-            all_results.update(
-                self._artists_albums(
-                    artists_ids=tuple(factory_.artist_ids), limit=limit
+            if not exploration_mode[ValidItem.ALBUM.value]:
+                all_results.update(
+                    set(
+                        factory_.dive(target_type=ValidItem.ALBUM, limit=limit)
+                    )
                 )
-            )
+            else:
+                all_results.update(
+                    set(
+                        factory_.explore(
+                            target_type=ValidItem.ALBUM, limit=limit
+                        )
+                    )
+                )
         if limit := limit_per_type.get(ValidItem.ARTIST.value):
-            all_results.update(
-                self._related_artists(
-                    artists_ids=tuple(factory_.artist_ids), limit=limit
+            if not exploration_mode[ValidItem.ARTIST.value]:
+                all_results.update(
+                    set(
+                        factory_.dive(
+                            target_type=ValidItem.ARTIST, limit=limit
+                        )
+                    )
                 )
-            )
+            else:
+                all_results.update(
+                    set(
+                        factory_.explore(
+                            target_type=ValidItem.ARTIST, limit=limit
+                        )
+                    )
+                )
         return all_results
-
-    def _related_artists(
-        self,
-        artists_ids: Tuple[int],
-        limit: int = 5,
-    ) -> Set[DeezerResource]:
-        if limit <= 0:
-            return set()
-
-        all_related = functools.reduce(
-            operator.add,
-            [
-                list(
-                    self.__client.get_artist(artist_id=artist_id).get_related()
-                )
-                for artist_id in artists_ids
-            ],
-        )
-        uniques_ = set(all_related)
-        return (
-            set(random.sample(uniques_, limit))
-            if len(uniques_) > limit
-            else uniques_
-        )
-
-    @functools.cache
-    def _artists_albums(
-        self,
-        artists_ids: Tuple[str],
-        limit: int = 5,
-    ) -> Set[DeezerResource]:
-        if limit <= 0:
-            return set()
-
-        limit_per_artist = utils.scale_weights(
-            [1] * min(len(artists_ids), limit), limit
-        )
-        limit_per_artist = {
-            artist_id: limit_for_artist
-            for artist_id, limit_for_artist in zip(
-                artists_ids,
-                limit_per_artist,
-            )
-        }
-        all_albums = functools.reduce(
-            operator.add,
-            [
-                self.__client.get_artist(int(artist_id)).get_albums()[
-                    :limit_for_artist
-                ]
-                for artist_id, limit_for_artist in limit_per_artist.items()
-            ],
-        )
-        return set(all_albums)
-
-    @functools.cache
-    def _tracks_from_artists(
-        self,
-        artists_ids: Tuple[str],
-        limit: int = 5,
-    ) -> Set[DeezerResource]:
-        if limit <= 0:
-            return set()
-
-        limit_per_artist = utils.scale_weights(
-            [1] * min(len(artists_ids), limit), limit
-        )
-        limit_per_artist = {
-            artist_id: limit_for_artist
-            for artist_id, limit_for_artist in zip(
-                artists_ids,
-                limit_per_artist,
-            )
-        }
-        all_tracks = functools.reduce(
-            operator.add,
-            [
-                self.__client.get_artist(artist_id=int(artist_id)).get_top()[
-                    :limit_for_artist
-                ]
-                for artist_id, limit_for_artist in limit_per_artist.items()
-            ],
-        )
-        return set(all_tracks)
-
-    @functools.cache
-    def _recommend_track_exploration_mode(
-        self,
-        item_: DeezerResource,
-        limit: int = 5,
-    ) -> Set[DeezerResource]:
-        if limit <= 0:
-            return set()
-        factory_ = ResourceFactory(resource=item_)
-        author_artists_ids = factory_.artist_ids
-        related_per_artist = int(limit / len(author_artists_ids))
-        related_artists = [
-            self.__client.get_artist(artist_id=artist_id).get_related()[
-                :related_per_artist
-            ]
-            for artist_id in author_artists_ids
-        ]
-        related_artists_ids = set(
-            [
-                str(artist.id)
-                for current_related_artists in related_artists
-                for artist in current_related_artists
-            ]
-        )
-        return self._tracks_from_artists(
-            artists_ids=tuple(related_artists_ids), limit=limit
-        )

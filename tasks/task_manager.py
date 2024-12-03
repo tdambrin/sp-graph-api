@@ -16,6 +16,7 @@ from tasks.task import Task
 
 
 class TaskManager:
+
     ALL_TYPES = [
         ValidItem.ALBUM.value,
         ValidItem.ARTIST.value,
@@ -100,7 +101,6 @@ class TaskManager:
             graph_key=self._graph_key,
             max_depth=3,
             restricted_types=self._selected_types,
-            write_cache=False,
             task_id=task_id,
         )
         current_graph = ItemStore().get_graph(
@@ -206,7 +206,7 @@ class TaskManager:
             session_id=self._session_id,
             graph_key=self._graph_key,
             item_=item,
-            depth=1,  # todo: fix that for styling
+            depth=1,  # activate expand enabled
             max_depth=1,
             backbone_type=DeezerWrapper().get_backbone_type(
                 self._selected_types
@@ -214,6 +214,10 @@ class TaskManager:
             star_types=self._selected_types,
             exploration_mode=True,
         )
+        # fixMe: fill from node
+        #  artist and album of a track
+        #  artist, top track of an album
+        #  top album, top track from artist
         current_graph = ItemStore().get_graph(
             session_id=self._session_id, graph_key=self._graph_key
         )

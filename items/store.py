@@ -299,6 +299,35 @@ class ItemStore(metaclass=ThreadSafeSingleton):
                 session_id=session_id, graph_key=graph_key, task_id=task_id
             )
 
+    def add_and_relate(
+        self,
+        session_id: str,
+        graph_key: str,
+        children: List[DeezerResource],
+        parent_id: int,
+        depth: int,
+        task_id: Optional[str] = None,
+        no_doubles: bool = True,
+        **kwargs,
+    ):
+        self.add_nodes(
+            session_id=session_id,
+            graph_key=graph_key,
+            items_=children,
+            depth=depth,
+            task_id=task_id,
+            **kwargs,
+        )
+        self.relate(
+            session_id=session_id,
+            graph_key=graph_key,
+            parent_id=parent_id,
+            children_ids={child.id for child in children},
+            no_doubles=no_doubles,
+            task_id=task_id,
+            **kwargs,
+        )
+
     def get_successors(
         self,
         session_id: str,
@@ -317,7 +346,6 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             recursive (bool): whether to check for successors' successors
             exclusion_set (Set[str]): to avoid loops when recursive
         """
-        print(f"Getting successors of {node_id}")
         exclusion_set = exclusion_set or set()
         graph = self.get_graph(session_id=session_id, graph_key=graph_key)
         if not graph or node_id not in graph.nodes:
@@ -362,7 +390,6 @@ class ItemStore(metaclass=ThreadSafeSingleton):
             recursive (bool): whether to check for predecessors' predecessors
             exclusion_set (Set[str]): to avoid loops when recursive
         """
-        print(f"Getting predecessors of {node_id}")
         exclusion_set = exclusion_set or set()
         graph = self.get_graph(session_id=session_id, graph_key=graph_key)
         if not graph or node_id not in graph.nodes:

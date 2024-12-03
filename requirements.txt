@@ -3,7 +3,6 @@ deezer-python
 networkx
 pydantic
 numpy
-matplotlib # for color styling
 # retry # to avoid fetching nodes already in the graph
 
 # Api

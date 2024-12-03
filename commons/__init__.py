@@ -8,6 +8,7 @@ from .utils import (
     nodes_edges_to_list_of_dict,
     order_words,
     random_color_generator,
+    scale_weights,
     str_to_values,
     values_to_str,
 )
