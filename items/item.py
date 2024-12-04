@@ -205,7 +205,7 @@ class ResourceFactory(BaseModel):
         per_artist = [
             {
                 "artist": artist,
-                "limit": limit,
+                "limit": weight,
             }
             for artist, weight in zip(
                 current_artists[:limit],

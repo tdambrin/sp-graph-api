@@ -1,9 +1,7 @@
 import functools
 import json
-import operator
-import random
 from difflib import SequenceMatcher
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Union
 
 import commons
 import config
@@ -75,6 +73,20 @@ class DeezerWrapper:
             restricted_types, key=lambda type_: cls.BACKBONE_PRIORITIES[type_]
         )
         return next(iter(candidates))
+
+    @staticmethod
+    def _scale_per_type(limit: int, restricted_types: List[str]):
+        relative_rec_weights = [
+            DeezerWrapper.TYPE_REC_WEIGHT[_type] for _type in restricted_types
+        ]
+        scaled_rec_weights = {
+            _type: scaled_weight
+            for _type, scaled_weight in zip(
+                restricted_types,
+                utils.scale_weights(relative_rec_weights, limit),
+            )
+        }
+        return scaled_rec_weights
 
     # -- Deezer methods --
 
@@ -396,8 +408,8 @@ class DeezerWrapper:
 
         return graph_key
 
+    @staticmethod
     def find_related(
-        self,
         session_id: str,
         graph_key: str,
         item_: DeezerResource,
@@ -407,8 +419,9 @@ class DeezerWrapper:
         star_types: List[str],
         task_id: Optional[str] = None,
         exploration_mode: bool | Dict[str, bool] = False,
+        limit: int | None = None,
         **kwargs,
-    ):
+    ) -> List[DeezerResource]:
         """
         Find nodes related to a starting node
         Args:
@@ -421,14 +434,17 @@ class DeezerWrapper:
             star_types (List[str]): types of the star nodes
             task_id (str): if provided, set intermediate results to task
             exploration_mode (bool | dict[type, bool]): to avoid getting tracks from the same artists
-            **kwargs:
+            limit (int): for star items
+
+        Returns:
+            (List[DeezerResource]) Star items
         """
 
         # -- Input validation --
         if not item_:
-            return
+            return []
         if depth > max_depth:
-            return
+            return []
         if isinstance(exploration_mode, dict) and not (
             {backbone_type, *star_types} == set(exploration_mode.keys())
         ):
@@ -452,7 +468,7 @@ class DeezerWrapper:
         # -- Core --
         # Get backbone extension first
         backbone_extension = list(
-            self.recommend_from_item(
+            DeezerWrapper.recommend_from_item(
                 item_=item_,
                 limit_per_type={backbone_type: 1},
                 exploration_mode=exploration_mode,
@@ -486,7 +502,7 @@ class DeezerWrapper:
         )
 
         if backbone_extension:  # bfs
-            self.find_related(
+            DeezerWrapper.find_related(
                 session_id=session_id,
                 graph_key=graph_key,
                 item_=backbone_extension[0],
@@ -504,23 +520,14 @@ class DeezerWrapper:
         star_types = [type_ for type_ in star_types if type_ != backbone_type]
 
         if star_types:  # If no start type, no star
-            relative_rec_weights = [
-                DeezerWrapper.TYPE_REC_WEIGHT[_type] for _type in star_types
-            ]
-            scaled_rec_weights = {
-                _type: scaled_weight
-                for _type, scaled_weight in zip(
-                    star_types,
-                    utils.scale_weights(
-                        relative_rec_weights, DeezerWrapper.REC_SIZE
-                    ),
-                )
-            }
-
+            limit_per_type = DeezerWrapper._scale_per_type(
+                limit=limit or DeezerWrapper.REC_SIZE,
+                restricted_types=star_types,
+            )
             star_items = list(
-                self.recommend_from_item(
+                DeezerWrapper.recommend_from_item(
                     item_=item_,
-                    limit_per_type=scaled_rec_weights,
+                    limit_per_type=limit_per_type,
                     exploration_mode=exploration_mode,
                 )
             )
@@ -549,6 +556,61 @@ class DeezerWrapper:
                 hidden=True,
                 is_backbone=False,
             )
+            return star_items
+        return []
+
+    @staticmethod
+    def fill(
+        session_id: str,
+        graph_key: str,
+        item_: DeezerResource,
+        restricted_types: List[str],
+        depth: int | None = 1,
+        task_id: str | None = None,
+    ):
+        """
+
+        Args:
+            session_id (str): user session identifier
+            graph_key (str): to get items from store
+            item_ (DeezerResource): starting item to find related for
+            restricted_types (List[str]): allowed types to get
+            depth (int): current depth
+            task_id (str): if provided, set intermediate results to task
+        """
+        alternative_types = [
+            type_ for type_ in restricted_types if type_ != item_.type
+        ]
+        limit_per_type = DeezerWrapper._scale_per_type(
+            limit=DeezerWrapper.REC_SIZE, restricted_types=alternative_types
+        )
+        filled = DeezerWrapper.recommend_from_item(
+            item_=item_,
+            limit_per_type=limit_per_type,
+            exploration_mode={type_: False for type_ in restricted_types},
+        )
+
+        # Parse and add to store
+        ItemStore().add_nodes(
+            session_id=session_id,
+            graph_key=graph_key,
+            items_=list(filled),
+            depth=depth + 2,
+            task_id=task_id,
+            is_backbone=False,
+            color=commons.random_color_generator(),
+        )
+
+        ItemStore().relate(
+            session_id=session_id,
+            graph_key=graph_key,
+            parent_id=item_.id,
+            children_ids={parsed_item.id for parsed_item in filled},
+            task_id=task_id,
+            color=config.NodeColor.BACKBONE,
+            hidden=True,
+            is_backbone=False,
+        )
 
     @staticmethod
     def recommend_from_item(

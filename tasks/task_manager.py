@@ -185,8 +185,8 @@ class TaskManager:
         """
 
         store = ItemStore()
-        item = store.get(item_id=node_id)
-        if item is None:
+        item_ = store.get(item_id=node_id)
+        if item_ is None:
             if item_type is None or item_type not in [
                 valid_.value for valid_ in ValidItem
             ]:
@@ -197,15 +197,22 @@ class TaskManager:
                     """
                 )
 
-            item = DeezerWrapper().find(
+            item_ = DeezerWrapper().find(
                 item_id=node_id,
                 item_type=ValidItem(item_type),
             )
         assert self._graph_key is not None, "Graph key not provided for expand"
-        DeezerWrapper().find_related(
+        DeezerWrapper.fill(
             session_id=self._session_id,
             graph_key=self._graph_key,
-            item_=item,
+            item_=item_,
+            restricted_types=self._selected_types,
+            depth=1,
+        )
+        DeezerWrapper.find_related(
+            session_id=self._session_id,
+            graph_key=self._graph_key,
+            item_=item_,
             depth=1,  # activate expand enabled
             max_depth=1,
             backbone_type=DeezerWrapper().get_backbone_type(
