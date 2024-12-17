@@ -260,7 +260,7 @@ class DeezerWrapper:
     ) -> float:
         """
         Compute a match score for candidate given query keywords and advanced modes.
-        Formula: w_str - .5 * w_type + w_pop, all weights in [0..1]
+        Formula: 2 * w_str - .1 * w_type + w_pop, all weights in [0..1]
         where:
             - w_str: SequenceMatcher().ratio for candidate - SequenceMatcher().ratio for champion
             - w_type: penalty of type priority (0 if candidate type is first in types_priority)
@@ -532,9 +532,6 @@ class DeezerWrapper:
                 )
             )
 
-            # For styling - new group
-            random_color = commons.random_color_generator()
-
             # Parse and add to store
             ItemStore().add_nodes(
                 session_id=session_id,
@@ -543,7 +540,7 @@ class DeezerWrapper:
                 depth=depth + 2,
                 task_id=task_id,
                 is_backbone=False,
-                color=random_color,
+                color=kwargs.get("color") or commons.random_color_generator(),
             )
 
             ItemStore().relate(
@@ -567,6 +564,7 @@ class DeezerWrapper:
         restricted_types: List[str],
         depth: int | None = 1,
         task_id: str | None = None,
+        color: str | None = None,
     ):
         """
 
@@ -577,6 +575,7 @@ class DeezerWrapper:
             restricted_types (List[str]): allowed types to get
             depth (int): current depth
             task_id (str): if provided, set intermediate results to task
+            color (str): optional, node color
         """
         alternative_types = [
             type_ for type_ in restricted_types if type_ != item_.type
@@ -598,7 +597,7 @@ class DeezerWrapper:
             depth=depth + 2,
             task_id=task_id,
             is_backbone=False,
-            color=commons.random_color_generator(),
+            color=color or commons.random_color_generator(),
         )
 
         ItemStore().relate(

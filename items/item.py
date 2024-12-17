@@ -391,7 +391,11 @@ class ResourceFactory(BaseModel):
 
     @property
     def _album_title(self) -> str:
-        return f"Album - {self.resource.title}\n released on {self.resource.release_date}"
+        return (
+            f"Album - {self.resource.title}\n"
+            f" by {','.join([a.name for a in self.resource.contributors])}\n"
+            f" released on {self.resource.release_date}"
+        )
 
     @property
     def _track_title(self) -> str:

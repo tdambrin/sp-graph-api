@@ -202,13 +202,20 @@ class TaskManager:
                 item_type=ValidItem(item_type),
             )
         assert self._graph_key is not None, "Graph key not provided for expand"
+
+        # Fill and Explore
+        #  Same color group
+        nodes_color = commons.random_color_generator()
+        #  Fill first
         DeezerWrapper.fill(
             session_id=self._session_id,
             graph_key=self._graph_key,
             item_=item_,
             restricted_types=self._selected_types,
             depth=1,
+            color=nodes_color,
         )
+        #  Then explore
         DeezerWrapper.find_related(
             session_id=self._session_id,
             graph_key=self._graph_key,
@@ -220,11 +227,8 @@ class TaskManager:
             ),
             star_types=self._selected_types,
             exploration_mode=True,
+            color=nodes_color,
         )
-        # fixMe: fill from node
-        #  artist and album of a track
-        #  artist, top track of an album
-        #  top album, top track from artist
         current_graph = ItemStore().get_graph(
             session_id=self._session_id, graph_key=self._graph_key
         )
